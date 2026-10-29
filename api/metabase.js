@@ -2,6 +2,7 @@
 // Env: METABASE_HOST, METABASE_API_KEY,
 //      PL_ORDERS_QUESTION_ID  (All Orders (PL))       -> /api/metabase
 //      PL_TODAY_QUESTION_ID   (Team Metrics — Today)  -> /api/metabase?q=today
+//      PL_TEAM_QUESTION_ID    (Team, per person)       -> /api/metabase?q=team
 //
 // Uses Metabase's export endpoint (/query/json), which returns ALL rows
 // (not the 2,000-row cap of the normal /query endpoint).
@@ -10,6 +11,7 @@
 const QUESTIONS = {
   orders: () => process.env.PL_ORDERS_QUESTION_ID || "4999",    // All Orders (PL)
   today: () => process.env.PL_TODAY_QUESTION_ID || "46135",     // Team Metrics — Today (feeds the totals)
+  team: () => process.env.PL_TEAM_QUESTION_ID || "46168",       // Team tab — per-person numbers
 };
 
 // Date range → Metabase template-tag variables (Date type) on the question
@@ -30,7 +32,12 @@ async function runCard(host, key, id, parameters) {
   return { ok: r.ok && Array.isArray(rows), status: r.status, rows, text };
 }
 
+import { currentUser } from "../lib/auth.js";
+
 export default async function handler(req, res) {
+  // signed-in people only
+  try { if (!(await currentUser(req))) return res.status(401).json({ error: "Sign in first.", auth: true }); }
+  catch (err) { return res.status(500).json({ error: String(err.message || err) }); }
   const host = (process.env.METABASE_HOST || "").replace(/\/$/, "");
   const key = process.env.METABASE_API_KEY;
   const which = String(req.query.q || "orders");
@@ -39,7 +46,7 @@ export default async function handler(req, res) {
   const id = QUESTIONS[which]();
   if (!host || !key) return res.status(500).json({ error: "Missing METABASE_HOST or METABASE_API_KEY" });
 
-  const wantRange = which === "today" && isDay(req.query.start) && isDay(req.query.end);
+  const wantRange = (which === "today" || which === "team") && isDay(req.query.start) && isDay(req.query.end);
   const params = wantRange ? [
     { type: "date/single", target: ["variable", ["template-tag", RANGE_TAGS.start]], value: req.query.start },
     { type: "date/single", target: ["variable", ["template-tag", RANGE_TAGS.end]], value: req.query.end },

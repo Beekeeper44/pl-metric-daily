@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PL Metric Daily</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=JetBrains+Mono:wght@400;500;700;800&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   :root {
@@ -54,6 +54,234 @@
   :root:not([data-theme="dark"]) .brand-logo { background: #10161d; border-radius: 8px; padding: 3px; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .brand-logo { background: none; padding: 0; } }
 
+  /* ---------- Team leaderboard (Metabase 46168) ---------- */
+  .lb-note { margin: 0 0 10px; font-weight: 600; }
+  .lb-note:empty { display: none; }
+  .lb-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-bottom: 16px; }
+  .lb-card { background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--c, #39ff14); border-radius: 12px; padding: 14px 16px; }
+  .lb-card header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .lb-card header h3 { margin: 0; font: 800 1.15rem var(--font-num); flex: 1; }
+  .lb-card header img { height: 28px; }
+  .lb-card header .sum { font: 800 1.1rem var(--font-num); }
+  .lb-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .lb-row { display: grid; grid-template-columns: 2.2em 40px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 10px; }
+  .lb-row:nth-child(-n+3) { background: color-mix(in srgb, var(--rk) 12%, transparent); }
+  .lb-rank { font: 800 1.05rem var(--font-num); text-align: center; color: var(--rk, var(--ink)); }
+  .lb-av { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font: 800 .95rem var(--font-num); color: #0b1a05; background: var(--av); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--rk, transparent); }
+  .lb-who { min-width: 0; }
+  .lb-name { font: 700 1.02rem var(--font-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lb-sub { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: .82rem; margin-top: 2px; }
+  .lb-sub b { font-family: var(--font-num); }
+  .lb-bar { height: 5px; border-radius: 3px; background: var(--line); margin-top: 5px; overflow: hidden; }
+  .lb-bar span { display: block; height: 100%; background: var(--c, #39ff14); }
+  .lb-val { font: 800 1.35rem var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
+  .lb-val small { display: block; font: 600 .72rem var(--font-body); text-transform: uppercase; letter-spacing: .04em; }
+  .lb-card.director { grid-column: 1 / -1; border-top-color: #39ff14; }
+  .tm-row { display: grid; grid-template-columns: minmax(0, 1fr) auto 10em; align-items: center; gap: 4px 16px; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  .tm-row .lb-edit-row { grid-column: 1 / -1; }
+  .tm-seen { display: flex; align-items: center; gap: 6px; font: 600 .9rem var(--font-body); white-space: nowrap; }
+  .tm-seen.live { color: #39ff14; font-weight: 800; }
+  .tm-tasks { font: 800 1.25rem var(--font-num); text-align: right; font-variant-numeric: tabular-nums; }
+  .tm-tasks small { display: block; white-space: nowrap; font: 700 .68rem var(--font-body); text-transform: uppercase; letter-spacing: .04em; }
+  .tm-row:last-child { border-bottom: 0; }
+  .lb-card.oregon .lb-list:has(.tm-row) { grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); column-gap: 24px; }
+  /* reorder */
+  .ord { display: inline-flex; align-items: center; gap: 4px; }
+  .grip { cursor: grab; font-size: 1.1rem; line-height: 1; opacity: .8; user-select: none; }
+  .ord-num { width: 2.6em; text-align: center; font: 700 .85rem var(--font-num); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 3px 2px; }
+  .tm-row.can-drag { grid-template-columns: auto minmax(0, 1fr) auto 10em; }
+  [data-drag-key].dragging { opacity: .4; }
+  li.drop-before { box-shadow: inset 0 3px 0 #39ff14; } li.drop-after { box-shadow: inset 0 -3px 0 #39ff14; }
+  tr.drop-before td { box-shadow: inset 0 3px 0 #39ff14; } tr.drop-after td { box-shadow: inset 0 -3px 0 #39ff14; }
+  .ord-cell { width: 1%; white-space: nowrap; }
+  /* person modal */
+  .pm { width: min(1480px, 96vw); max-height: 96vh; overflow: hidden; padding: 0; border: 1px solid var(--line); border-top: 4px solid #39ff14; border-radius: 16px;
+    background: var(--surface); color: var(--ink); box-shadow: 0 30px 80px rgba(0, 0, 0, .55); }
+  .pm[open] { animation: pm-in .16s ease-out; }
+  @keyframes pm-in { from { transform: translateY(8px) scale(.99); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .pm[open] { animation: none; } }
+  .pm::backdrop { background: rgba(4, 7, 10, .78); backdrop-filter: blur(2px); }
+  .pm-inner { display: grid; gap: 20px; padding: 26px 30px 24px; }
+  .pm-head { display: flex; align-items: flex-start; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+  .pm-title { display: grid; gap: 10px; }
+  .pm-head h2 { margin: 0; font: 800 2.1rem/1.05 var(--font-num); letter-spacing: -.01em; }
+  .pm-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); font: 700 .9rem var(--font-body); }
+  .pm-chips .dept, .pm-chips .tier { font-size: .85rem; padding: 4px 12px; }
+  .pm-logos { margin-left: auto; display: flex; gap: 10px; align-items: center; } .pm-logos img { height: 38px; }
+  .pm-x { background: var(--bg); border: 1px solid var(--line); color: var(--ink); border-radius: 10px; width: 40px; height: 40px; font-size: 1.1rem; flex: none; }
+  .pm-x:hover { border-color: #39ff14; color: #39ff14; }
+  .pm-fields:empty { display: none; }
+  .pm-facts { display: flex; flex-wrap: wrap; gap: 8px 22px; font: 600 1rem var(--font-body); }
+  .pm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px 14px; align-items: end;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .pm-grid label { display: grid; gap: 6px; font-weight: 700; font-size: .9rem; }
+  .pm-grid input, .pm-grid select { font: 600 1rem var(--font-body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; }
+  .pm-grid input:focus, .pm-grid select:focus { outline: none; border-color: #39ff14; }
+  .pm-grid .pm-hide { display: flex; align-items: center; gap: 8px; }
+  .pm-skills-head { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+  .pm-skills-head h3 { margin: 0; font: 800 1.35rem var(--font-num); }
+  .pm-count { font: 600 1rem var(--font-body); }
+  .pm-skills-head .spacer { flex: 1; }
+  .pm-legend { display: flex; gap: 8px; }
+  .sk-key { padding: 3px 10px; border-radius: 999px; font: 700 .82rem var(--font-body); }
+  .sk-key.on { background: #1f9d45; color: #fff; } .sk-key.off { background: #d23a3a; color: #fff; } .sk-key.unset { border: 1px solid var(--line); }
+  .pm-skills { display: grid; gap: 12px; }
+  .sk-group { display: grid; grid-template-columns: 11.5em minmax(0, 1fr); gap: 10px; align-items: start; }
+  .sk-group h4 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 6px 0 0; font: 800 1rem var(--font-body); text-transform: uppercase; letter-spacing: .04em; }
+  .sk-group h4 .sk-row { flex-basis: 100%; }
+  .sk-group h4 span.sk-n { font: 800 1rem var(--font-num); letter-spacing: 0; }
+  .sk-mini { background: var(--bg); border: 1px solid var(--line); color: var(--ink); border-radius: 999px; padding: 4px 13px; font: 800 .85rem var(--font-body); text-transform: none; letter-spacing: 0; cursor: pointer; }
+  .sk-mini:hover { border-color: #39ff14; color: #39ff14; }
+  .sk-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  /* pills — rounded, soft colour fill + solid bubble (✓ / ✕ / –) */
+  .sk { display: inline-flex; align-items: center; gap: 12px; padding: 10px 18px; border-radius: 999px; background: #161a1f; border: 1.5px solid #3a4049;
+    color: #f4f6f8; font: 600 1.05rem/1.1 var(--font-body); white-space: nowrap; transition: border-color .12s, box-shadow .12s, background .12s, transform .08s; }
+  .sk .sk-ic { min-width: 30px; height: 26px; padding: 0 8px; border-radius: 999px; display: inline-grid; place-items: center; background: #2c3138; color: #f4f6f8; font: 800 .85rem var(--font-num); }
+  .sk.on  { background: rgba(47, 184, 74, .22); border-color: rgba(47, 184, 74, .75); }
+  .sk.on .sk-ic  { background: #2fb84a; color: #06210f; }
+  .sk.off { background: rgba(224, 72, 72, .22); border-color: rgba(224, 72, 72, .75); }
+  .sk.off .sk-ic { background: #e04848; color: #fff; }
+  .sk.unset { background: #161a1f; }
+  .sk:not([disabled]):not(.demo) { cursor: pointer; }
+  .sk:not([disabled]):not(.demo):hover { box-shadow: 0 0 0 2px #39ff14; transform: translateY(-1px); }
+  .sk[disabled] { cursor: default; opacity: 1; }
+  .sk.demo { font-size: .82rem; padding: 3px 12px; gap: 6px; } .sk.demo .sk-ic { min-width: 20px; height: 18px; font-size: .7rem; }
+  .sk-grid { gap: 10px; }
+  .sk-group { grid-template-columns: 14em minmax(0, 1fr); gap: 14px; }
+  .sk-group h4 { margin-top: 6px; }
+  .sk-row { background: none; border: 0; padding: 0; color: var(--ink); font: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; text-align: left; }
+  .sk-row:hover { color: #39ff14; text-decoration: underline; text-underline-offset: 3px; }
+  .sk-n { font: 800 1rem var(--font-num); } .sk-n.full { color: #39ff14; }
+  .pm-skills { gap: 14px; }
+  .pm-legend { display: flex; gap: 6px; }
+  :root[data-theme="light"] .sk, :root:not([data-theme="dark"]) .sk { }
+  .pm-bulk { grid-column: 1 / -1; display: flex; gap: 10px; }
+  .pm-bulk .row-btn { padding: 8px 18px; font: 800 .95rem var(--font-body); border-radius: 999px; }
+  .pm-bulk .row-btn:hover { border-color: #39ff14; color: #39ff14; }
+  .pm-opts { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-left: 8px; }
+  .opt-wrap { display: inline-flex; align-items: center; }
+  .opt { --oc: #e3b341; display: inline-flex; align-items: center; gap: 8px; height: 34px; line-height: 1; padding: 0 14px; border-radius: 999px 0 0 999px; border: 1.5px solid var(--oc);
+    background: color-mix(in srgb, var(--oc) 14%, transparent); color: var(--ink); font: 800 .9rem var(--font-body); cursor: pointer; }
+  .opt b { padding: 0 7px; border-radius: 999px; background: var(--oc); color: #14100a; font: 800 .75rem var(--font-num); }
+  .opt-1 { --oc: #e3b341; } .opt-2 { --oc: #c7cfd9; } .opt-3 { --oc: #cf8150; }
+  .opt.opt-empty { border-style: dashed; background: none; }
+  .opt.active { background: var(--oc); color: #14100a; box-shadow: 0 0 12px color-mix(in srgb, var(--oc) 60%, transparent); }
+  .opt.active b { background: #14100a; color: var(--oc); }
+  .opt.setting { outline: 2px solid #39ff14; outline-offset: 2px; }
+  .opt[disabled] { cursor: default; border-radius: 999px; }
+  .opt-edit { --oc: #e3b341; height: 34px; line-height: 1; padding: 0 11px; border-radius: 0 999px 999px 0; border: 1.5px solid var(--line); border-left: 0; background: var(--bg); color: var(--ink); font: 800 .85rem var(--font-body); cursor: pointer; }
+  .opt-edit:hover { color: #39ff14; border-color: #39ff14; }
+  .opt-name { padding: 1px 10px; border-radius: 999px; background: var(--oc); color: #14100a; }
+  .pm-copy { display: flex; gap: 8px; }
+  .cp-btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: 999px; border: 1.5px solid #7cf0ff;
+    background: color-mix(in srgb, #7cf0ff 10%, transparent); color: var(--ink); font: 800 .9rem var(--font-body); cursor: pointer; }
+  .cp-btn:hover { background: #7cf0ff; color: #04222a; }
+  .cp-btn b, .cp-btn i { font: 800 .72rem var(--font-num); font-style: normal; padding: 0 7px; border-radius: 999px; }
+  .cp-btn b { background: #2fb84a; color: #06210f; } .cp-btn i { background: #e04848; color: #fff; }
+  .pm-optbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; border: 1px solid #39ff14;
+    background: color-mix(in srgb, #39ff14 8%, transparent); font-weight: 600; }
+  .pm-optbar .spacer { flex: 1; }
+  .sk.pick { box-shadow: 0 0 0 2px #39ff14; }
+  .uid-src { font: 700 .72rem var(--font-body); color: #39ff14; margin-left: 6px; }
+  .pm-push-btn { background: none; color: #7cf0ff; border: 1.5px solid #7cf0ff; border-radius: 8px; padding: 8px 16px; font: 800 .95rem var(--font-body); cursor: pointer; }
+  .pm-push-btn:hover { background: #7cf0ff; color: #04222a; }
+  .pm-push { display: grid; gap: 10px; padding: 14px 16px; border-radius: 12px; border: 1.5px solid #7cf0ff; background: color-mix(in srgb, #7cf0ff 7%, transparent); }
+  .pm-push p { margin: 0; font-weight: 600; }
+  .push-mode { justify-self: start; padding: 2px 10px; border-radius: 999px; font: 800 .75rem var(--font-body); letter-spacing: .04em; }
+  .push-mode.dry { background: #ffb84d; color: #2a1800; } .push-mode.live { background: #e04848; color: #fff; }
+  .push-uid { font: 600 .8rem ui-monospace, Menlo, monospace; opacity: .8; }
+  .push-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .push-chip { padding: 4px 12px; border-radius: 999px; font: 700 .85rem var(--font-body); }
+  .push-chip.on { background: rgba(47, 184, 74, .22); border: 1px solid rgba(47, 184, 74, .75); }
+  .push-chip.off { background: rgba(224, 72, 72, .22); border: 1px solid rgba(224, 72, 72, .75); }
+  .push-results { display: grid; gap: 4px; max-height: 40vh; overflow: auto; font-size: .9rem; }
+  .push-results .ok b { color: #39ff14; } .push-results .bad b { color: var(--danger); }
+  .push-results code { display: block; margin: 1px 0 4px 18px; font: .75rem ui-monospace, Menlo, monospace; opacity: .85; word-break: break-all; }
+  .push-acts { display: flex; gap: 8px; align-items: center; } .push-acts .spacer { flex: 1; }
+  .pm-edit-btn { background: #39ff14; color: #0b1a05; border: 0; border-radius: 8px; padding: 9px 18px; font: 800 .95rem var(--font-body); cursor: pointer; }
+  .pm.editing { border-top-color: #ffb84d; }
+  .pm.editing .pm-head h2::after { content: "editing"; margin-left: 12px; vertical-align: middle; font: 800 .75rem var(--font-body); letter-spacing: .05em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 999px; background: #ffb84d; color: #2a1800; }
+  .row-edit { margin-left: 10px; background: rgba(57, 255, 20, .12); border: 1px solid rgba(57, 255, 20, .6); color: #39ff14; border-radius: 999px;
+    padding: 2px 11px; font: 800 .75rem var(--font-body); cursor: pointer; vertical-align: middle; white-space: nowrap; transition: background .12s, box-shadow .12s; }
+  .row-edit:hover, .row-edit:focus-visible { background: #39ff14; color: #0b1a05; box-shadow: 0 0 8px rgba(57, 255, 20, .55); }
+  .tm-name { display: flex; align-items: center; flex-wrap: wrap; }
+  .pm-foot { display: flex; align-items: center; gap: 10px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .pm-foot .spacer { flex: 1; }
+  .pm-foot .primary { padding: 10px 22px; font-size: 1rem; }
+  .pm-foot .row-btn { padding: 9px 16px; font-size: .95rem; }
+  @media (max-width: 700px) { .pm-skills { grid-template-columns: 1fr; } .pm-inner { padding: 18px; } }
+  /* PL roster table */
+  .pl-depts { margin: 0 0 10px; }
+  .logo-btn { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; background: var(--bg); border: 2px solid var(--line); border-radius: 12px;
+    padding: 4px 8px; cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+  .logo-btn img { height: 28px; }
+  .logo-btn:hover { border-color: #39ff14; }
+  .logo-btn.on { border-color: #39ff14; box-shadow: 0 0 10px rgba(57, 255, 20, .55), inset 0 0 6px rgba(57, 255, 20, .25); }
+  .logo-btn .fold-n { font: 800 .85rem var(--font-num); padding: 1px 8px; border-radius: 999px; background: var(--line); color: var(--ink); }
+  .lb-card header .sum + .logo-btn { margin-left: 12px; }
+  .lb-card.shut { padding-bottom: 14px; }
+  .lb-card.shut header { margin-bottom: 0; }
+  /* selected filter / group pills on the Team tab = neon green */
+  #view-team .pills button[aria-pressed="true"] { background: #39ff14; color: #0b1a05; border-color: #39ff14; box-shadow: 0 0 10px rgba(57, 255, 20, .55); }
+  #view-team .pills button[aria-pressed="true"] .dept { background: #0b1a05; }
+  .pl-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0 0 8px; }
+  .pl-tools-l { font-weight: 800; font-size: .9rem; }
+  .pl-tools .sk-mini { margin-left: 0; }
+  .grp-row td { padding: 0 !important; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .grp-line { display: flex; align-items: center; gap: 10px; padding-right: 10px; }
+  .grp-line .grp-toggle { flex: 1; width: auto; }
+  .grp-opts { display: flex; gap: 6px; flex: none; }
+  .grp-opt { height: 28px; border-radius: 999px; padding: 0 12px; font-size: .8rem; }
+  .grp-opt b { font-size: .7rem; }
+  .bulk-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 10px; padding: 10px 14px; border-radius: 10px;
+    border: 1.5px solid #39ff14; background: color-mix(in srgb, #39ff14 8%, transparent); font-weight: 600; }
+  .bulk-bar .spacer { flex: 1; }
+  .grp-toggle { width: 100%; display: flex; align-items: center; gap: 10px; background: none; border: 0; color: var(--ink); padding: 10px 10px; font: 800 .95rem var(--font-body); text-align: left; cursor: pointer; }
+  .grp-toggle:hover { background: color-mix(in srgb, #39ff14 6%, transparent); }
+  .grp-caret { width: 1em; }
+  .grp-name { color: #39ff14; }
+  .grp-sub { font-weight: 600; font-size: .85rem; }
+  .grp-count { margin-left: 4px; padding: 1px 9px; border-radius: 999px; background: #39ff14; color: #0b1a05; font: 800 .78rem var(--font-num); }
+  .pl-depts button { display: inline-flex; align-items: center; gap: 6px; }
+  .pl-table { font-size: .92rem; }
+  .pl-table td { white-space: normal; }
+  .pl-table td.pl-name { font-weight: 700; }
+  .pl-table td.pl-rep { color: #39ff14; font-weight: 600; }
+  .pl-table tr.is-hidden td { opacity: .5; }
+  .pl-table tr.open td { background: color-mix(in srgb, #39ff14 7%, transparent); }
+  .dept, .tier { display: inline-block; padding: 1px 9px; border-radius: 10px; font: 700 .76rem var(--font-body); border: 1px solid currentColor; white-space: nowrap; }
+  .d-lead { color: var(--ink); } .d-cs { color: #ff7ab6; } .d-review { color: #ff6b6b; } .d-data { color: #5dd39e; }
+  .d-items { color: #4fd8e8; } .d-grading { color: #a98bff; } .d-recomp { color: #ff9a4d; } .d-community { color: #ffd84d; } .d-other { color: var(--ink); }
+  .t-prime { color: #6aa8ff; } .t-pro { color: #ffc24d; } .t-elite { color: #b996ff; }
+  .lb-edit-row.pl { grid-template-columns: 1.2fr 1.3fr .8fr .7fr 1fr .9fr auto; }
+  .lb-add.pl { grid-template-columns: 1.2fr 1.2fr .8fr .7fr 1fr auto; }
+  .tm-name { font: 700 1.1rem var(--font-body); }
+  .tm-role { font: 600 .92rem var(--font-body); margin-top: 1px; }
+  .tm-row.is-hidden { opacity: .55; }
+  .tm-row.open { background: color-mix(in srgb, #39ff14 7%, transparent); border-radius: 8px; }
+  .tm-link { background: none; border: 0; padding: 0; color: var(--ink); font: inherit; cursor: pointer; text-align: left; }
+  .tm-link:hover, .tm-link:focus-visible { color: #39ff14; text-decoration: underline; }
+  .lb-list:has(.tm-row) { gap: 0; }
+  .lb-card.director .lb-list:has(.tm-row) { grid-template-columns: repeat(auto-fill, minmax(560px, 1fr)); }
+  .lb-card.director .lb-list { grid-template-columns: repeat(auto-fill, minmax(560px, 1fr)); }
+  .lb-role { font-size: .85rem; font-weight: 600; }
+  .lb-seen { font-size: .78rem; white-space: nowrap; }
+  @media (max-width: 900px) { .lb-grid { grid-template-columns: 1fr; } }
+  .lb-row.is-hidden { opacity: .55; }
+  .edit-team { background: none; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font-weight: 700; }
+  .edit-team[aria-pressed="true"] { background: #39ff14; color: #0b1a05; border-color: #39ff14; }
+  .lb-edit-row { grid-column: 1 / -1; display: grid; grid-template-columns: 1.2fr 1.2fr 1fr auto; gap: 6px; align-items: center; padding: 6px 0 2px; }
+  .lb-edit-row input, .lb-edit-row select, .lb-add input, .lb-add select {
+    font: 600 .9rem var(--font-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; min-width: 0; }
+  .lb-edit-row .acts { display: flex; gap: 4px; flex-wrap: wrap; }
+  .lb-edit-row label { display: flex; align-items: center; gap: 4px; font-size: .85rem; font-weight: 700; white-space: nowrap; }
+  .lb-add { display: grid; grid-template-columns: 1.2fr 1.2fr 1.2fr auto; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+  .lb-hidden-list { margin-top: 6px; }
+  .lb-hidden-list summary { cursor: pointer; font-weight: 700; }
+  .lb-empty { margin: 0; padding: 8px 0; font-weight: 600; }
+
   /* ---------- Team view ---------- */
   .team-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
   .team-card { background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--c); border-radius: 10px; padding: 14px 16px; display: grid; gap: 10px; align-content: start; }
@@ -76,6 +304,95 @@
   .team-card .empty-note { margin: 0; padding: 10px 0; }
   @media (max-width: 900px) { .team-grid { grid-template-columns: 1fr; } }
 
+  [hidden] { display: none !important; }
+  /* ---------- Users + sign-in ---------- */
+  .me { display: inline-flex; align-items: center; gap: 8px; margin-left: 8px; font-weight: 700; }
+  .me button { background: none; border: 1px solid var(--line); color: var(--ink); border-radius: 8px; padding: 5px 10px; }
+  .users-grid { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 14px; align-items: start; }
+  .card-box { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 10px; }
+  .card-box h3 { margin: 0; font: 700 1.1rem var(--font-body); }
+  .card-box h3.mt { margin-top: 10px; }
+  .card-box label, .gate-card label { display: grid; gap: 4px; font-weight: 700; font-size: .95rem; }
+  .card-box input, .card-box select, .gate-card input, .users-grid td select {
+    font: 500 1rem var(--font-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+  .primary { background: #39ff14; color: #0b1a05; border: 0; border-radius: 8px; padding: 9px 14px; font-weight: 800; }
+  .primary:disabled { opacity: .6; }
+  .ghost-btn, .row-btn { background: none; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; font-weight: 700; text-decoration: none; cursor: pointer; }
+  .row-btn { padding: 4px 9px; font-size: .85rem; margin-left: 4px; }
+  .row-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+  .form-msg { margin: 0; min-height: 1.2em; font-weight: 700; }
+  .form-msg.err { color: var(--danger); } .form-msg.ok { color: var(--ok); }
+  .link-out { display: grid; gap: 8px; }
+  .link-out input { font-family: ui-monospace, Menlo, monospace; font-size: .85rem; }
+  .link-actions { display: flex; gap: 8px; }
+  .hint { margin: 0; font-size: .85rem; }
+  .add-user { background: #39ff14 !important; color: #0b1a05 !important; border: 0 !important; font-weight: 800; }
+  .perm-box { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 0; }
+  .perm-box legend { font-weight: 700; padding: 0 4px; }
+  .perm-list { display: grid; gap: 4px; }
+  .perm-list.compact { grid-template-columns: repeat(2, max-content); gap: 3px 14px; }
+  .perm { display: flex !important; align-items: center; gap: 6px; font-weight: 600 !important; font-size: .9rem; cursor: pointer; border-radius: 6px; transition: background .3s; }
+  .card-box .perm input, .perm input { flex: none; width: 16px; height: 16px; min-width: 16px; padding: 0; margin: 0; accent-color: #39ff14; }
+  .perm { white-space: nowrap; }
+  .perm.saved { background: color-mix(in srgb, #39ff14 25%, transparent); }
+  .perm-all { font-weight: 700; color: #39ff14; }
+  .perm-mini { font-size: .8rem; }
+  .no-access { padding: 40px 0; font-size: 1.1rem; font-weight: 700; text-align: center; }
+  body.no-edit .target { pointer-events: none; opacity: .8; }
+  .from-team { margin-top: 14px; }
+  /* Users — same layout as TAG-BOT */
+  .um { font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; display: grid; gap: 14px; }
+  .um-add { display: grid; grid-template-columns: 1.2fr 1.2fr 1.4fr auto; gap: 12px; align-items: end;
+    background: color-mix(in srgb, #39ff14 5%, var(--surface)); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .um-add label, .um-pass label { display: grid; gap: 6px; font-weight: 700; font-size: .85rem; }
+  .um input, .um select { font: 500 .95rem "JetBrains Mono", ui-monospace, Menlo, monospace; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; min-width: 0; }
+  .um .primary { font-family: inherit; padding: 10px 16px; }
+  .um-msg { margin: 0; min-height: 1.1em; font-weight: 700; font-size: .9rem; }
+  .um-link { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .um-link input { flex: 1 1 420px; font-size: .82rem; }
+  .um-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  .um-table th { text-align: left; font-weight: 600; padding: 10px 8px; border-bottom: 1px solid var(--line); background: none; position: static; cursor: default; }
+  .um-table td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; white-space: normal; }
+  .um-table td b { font-weight: 800; }
+  .um-dim { opacity: .75; font-size: .85rem; }
+  .um-green { color: #39ff14; font-weight: 700; } .um-orange { color: #ffb84d; font-weight: 800; } .um-red { color: var(--danger); font-weight: 800; }
+  .um-role { padding: 7px 8px !important; }
+  .um-a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; margin-right: 8px; white-space: nowrap; }
+  .um-a:hover { color: #39ff14; } .um-a.um-danger:hover { color: var(--danger); }
+  .um-acts { white-space: nowrap; }
+  .um-off td { opacity: .6; }
+  .um-access summary { cursor: pointer; font-size: .85rem; }
+  .um-access .perm-list { margin-top: 6px; }
+  .um-pass { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; }
+  .um-pass h3 { margin: 0; font: 800 1rem "JetBrains Mono", ui-monospace, monospace; }
+  .um-pass-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+  .um-btn { font: 700 .95rem "JetBrains Mono", ui-monospace, monospace; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 9px 14px; }
+  .ft-summary { cursor: pointer; font-weight: 800; }
+  @media (max-width: 900px) { .um-add { grid-template-columns: 1fr; } }
+  .setup-box { max-width: 760px; }
+  .setup-box ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .setup-box li { display: flex; gap: 10px; align-items: baseline; font-weight: 600; }
+  .setup-box li b { font-family: ui-monospace, Menlo, monospace; }
+  .setup-box .ok-mark { color: #39ff14; font-weight: 900; } .setup-box .no-mark { color: var(--danger); font-weight: 900; }
+  .ft-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .ft-head .spacer { flex: 1; }
+  .ft-role { display: flex !important; align-items: center; gap: 8px; font-weight: 700; }
+  .from-team td input[type="checkbox"], .from-team th input[type="checkbox"] { width: 18px; height: 18px; accent-color: #39ff14; padding: 0; }
+  .from-team .link-cell { font: .8rem ui-monospace, Menlo, monospace; max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .access { font-weight: 800; }
+  .access.on { color: #39ff14; } .access.pending { color: var(--orange); }
+  .role-tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: .8rem; font-weight: 800; background: #39ff14; color: #0b1a05; }
+  .gate { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 20px; background: var(--bg); }
+  .gate[hidden] { display: none; }
+  .gate-card { width: min(420px, 100%); background: var(--surface); border: 1px solid var(--line); border-top: 4px solid #39ff14; border-radius: 14px; padding: 22px; display: grid; gap: 12px; }
+  .gate-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .gate-brand img { height: 44px; }
+  .gate-brand h1 { margin: 0; font: 800 1.6rem var(--font-num); }
+  .gate-brand h1 .g { color: #39ff14; }
+  .gate-brand p { margin: 2px 0 0; font: 500 .9rem ui-monospace, Menlo, monospace; }
+  @media (max-width: 900px) { .users-grid { grid-template-columns: 1fr; } }
+
   /* ---------- View tabs ---------- */
   .views { display: flex; gap: 8px; margin: 0; flex: none; }
   .views button { flex: 0 0 auto; padding: 7px 20px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface);
@@ -97,6 +414,10 @@
   .notice .rows-loaded { font-size: .85rem; padding: 2px 10px; border-radius: 10px; border: 1px solid currentColor; }
   .notice .demo { font-size: .85rem; padding: 2px 10px; border-radius: 10px; border: 1px dashed currentColor; }
   .notice .updated { font-size: .85rem; opacity: .85; }
+  .notice[hidden] { display: none !important; }
+  .colcheck summary { cursor: pointer; font-weight: 700; color: var(--danger); }
+  .colcheck div { margin-top: 6px; font-size: .8rem; line-height: 1.8; }
+  .colcheck code { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; margin-right: 4px; }
   .notice button[disabled] { opacity: .6; cursor: progress; }
   .notice button, .ghost {
     background: transparent; color: inherit; border: 1px solid currentColor; border-radius: 6px; padding: 4px 10px;
@@ -295,6 +616,8 @@
       <button type="button" data-view="metrics">Metrics</button>
       <button type="button" data-view="queue">Queue <b id="queue-tab-count"></b></button>
       <button type="button" data-view="team">Team</button>
+      <button type="button" data-view="users" id="users-tab" hidden>Users</button>
+      <span class="me" id="me" hidden><span id="me-name"></span><button type="button" id="sign-out">Sign out</button></span>
     </nav>
   </header>
 
@@ -364,15 +687,107 @@
   </section>
 
 
+  <p class="no-access" id="no-access" hidden>You’re signed in, but nothing is turned on for you yet. Ask an admin to give you access.</p>
+
+  <!-- ===== USERS (admins) ===== -->
+  <section class="section view" id="view-users" aria-labelledby="users-h" hidden>
+    <div class="section-head"><h2 id="users-h">Users</h2><span class="count" id="users-count"></span></div>
+    <div class="card-box setup-box" id="setup-box" hidden></div>
+    <div class="um" id="users-main">
+      <form class="um-add" id="invite-form" autocomplete="off">
+        <label>Name<input id="inv-name" required placeholder="Full name"></label>
+        <label>Work email<input id="inv-email" type="email" required placeholder="name@arenaclub.com"></label>
+        <label>Role<select id="inv-role"><option value="member">member — full access</option><option value="admin">admin — full access + users</option></select></label>
+        <button type="submit" class="primary">Add person</button>
+      </form>
+      <p class="um-msg" id="inv-msg" role="status"></p>
+      <div class="um-link" id="link-out" hidden>
+        <input id="link-text" readonly aria-label="Link">
+        <button type="button" id="link-copy" class="primary">Copy link</button>
+        <a id="link-mail" class="um-a">email it</a>
+        <span class="um-dim" id="link-hint"></span>
+      </div>
+      <table class="um-table">
+        <thead><tr><th>person</th><th>role</th><th>access</th><th>status</th><th>last sign-in</th><th></th></tr></thead>
+        <tbody id="users-body"></tbody>
+      </table>
+      <form class="um-pass" id="pass-form" autocomplete="off">
+        <h3>Your password</h3>
+        <div class="um-pass-row">
+          <label>Current<input id="pw-cur" type="password" autocomplete="current-password" required></label>
+          <label>New (10+ characters)<input id="pw-new" type="password" autocomplete="new-password" minlength="10" required></label>
+          <button type="submit" class="um-btn">Change password</button>
+          <span class="um-msg" id="pw-msg" role="status"></span>
+        </div>
+      </form>
+    <details class="card-box from-team" id="from-team">
+      <summary class="ft-summary">Add from the team list (Metabase 46168)</summary>
+      <div class="ft-head">
+        <h3>Add team members as users</h3>
+        <span class="count" id="ft-count"></span>
+        <span class="spacer"></span>
+        <label class="ft-role">Give them
+          <select id="ft-role"><option value="admin" selected>Admin — everything + manage users</option><option value="member">Member — default access</option></select>
+        </label>
+        <button type="button" class="primary" id="ft-go" disabled>Create invite links</button>
+      </div>
+      <p class="hint">People from the Team tab (Metabase 46168 + anyone added by hand). Tick who should get access to this app.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th><input type="checkbox" id="ft-all" aria-label="Select everyone"></th><th>Name</th><th>Role / title</th><th>Team</th><th>Email</th><th>App access</th></tr></thead>
+        <tbody id="ft-body"></tbody>
+      </table></div>
+      <div id="ft-links" hidden>
+        <div class="ft-head"><h3>Invite links</h3><span class="spacer"></span><button type="button" class="primary" id="ft-copy-all">Copy all</button></div>
+        <div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Link</th><th></th></tr></thead><tbody id="ft-links-body"></tbody></table></div>
+        <p class="hint">Each link works once and expires in 7 days.</p>
+      </div>
+    </details>
+    </div>
+  </section>
+
   <!-- ===== TEAM ===== -->
   <section class="section view" id="view-team" aria-labelledby="team-h" hidden>
     <div class="section-head">
       <h2 id="team-h">Team</h2>
-      <span class="count" id="team-count"></span>
+      <span class="count" id="lb-count"></span>
+      <div class="pills" id="lb-metrics" aria-label="Rank by"></div>
+      <input class="search" id="lb-search" type="search" placeholder="Search names" aria-label="Search names">
+      <button type="button" class="edit-team" id="lb-edit" hidden>Edit team</button>
     </div>
-    <div class="team-grid" id="team-grid"></div>
+    <p class="lb-note" id="lb-note"></p>
+    <div class="lb-grid" id="lb-grid"></div>
+    <div id="lb-hidden"></div>
   </section>
 </main>
+
+<!-- ===== PERSON (click a name on the Team tab) ===== -->
+<dialog class="pm" id="person-modal" aria-labelledby="pm-name">
+  <form method="dialog" class="pm-inner" id="pm-form">
+    <header class="pm-head">
+      <div class="pm-title"><h2 id="pm-name"></h2><div class="pm-chips" id="pm-sub"></div></div>
+      <div class="pm-logos" id="pm-logos"></div>
+      <button type="button" class="pm-x" id="pm-close" aria-label="Close">✕</button>
+    </header>
+    <div class="pm-fields" id="pm-fields"></div>
+    <div class="pm-skills-head"><h3>Skills</h3><span class="pm-count" id="pm-skill-count"></span>
+      <div class="pm-opts" id="pm-opts"></div><div class="pm-copy" id="pm-copy"></div><span class="spacer"></span>
+      <span class="pm-legend"><span class="sk on demo">on</span><span class="sk off demo">off</span><span class="sk unset demo">not set</span></span></div>
+    <div class="pm-optbar" id="pm-optbar" hidden></div>
+    <div class="pm-push" id="pm-push" hidden></div>
+    <div class="pm-skills" id="pm-skills"></div>
+    <footer class="pm-foot" id="pm-foot"></footer>
+  </form>
+</dialog>
+
+<!-- ===== SIGN IN / SET UP / INVITE ===== -->
+<div class="gate" id="gate" hidden>
+  <form class="gate-card" id="gate-form" autocomplete="on">
+    <div class="gate-brand"><img id="gate-logo" alt=""><div><h1><span class="g">PL</span> Metric Daily</h1><p id="gate-sub">Sign in</p></div></div>
+    <div id="gate-fields"></div>
+    <button type="submit" class="primary" id="gate-submit">Sign in</button>
+    <p class="form-msg" id="gate-msg" role="status"></p>
+  </form>
+</div>
 
 <script>
 const TEAM_LOGOS = {
@@ -499,8 +914,11 @@ function detectColumns(data) {
     raw: findCol(keys, ["RAW"]),
     graded: findCol(keys, ["GRADED"]),
     total: findCol(keys, ["TOTAL_ITEMS"]),
-    done: RULES.doneColumn || findCol(keys, ["✅", "✔", "✔️", "☑️"], k => /✅|✔|☑|check|done/i.test(k)),
-    ev: RULES.evColumn || findCol(keys, ["$", "💲", "💵"], k => /^\s*\$\s*$|💲|💵|ev_?done/i.test(k)),
+    // ✅ = CC check (green check), $ = EV check — Metabase may send the emoji header or the SQL column name
+    done: RULES.doneColumn || findCol(keys, ["✅", "✔", "✔️", "☑️", "CC_CHECK", "HAS_CC_NOTE", "CC_NOTE", "GREEN_CHECK"],
+            k => /✅|✔|☑/.test(k) || /(^|_)cc(_|$)|cc_?check|cc_?note/i.test(k)),
+    ev: RULES.evColumn || findCol(keys, ["$", "💲", "💵", "EV_CHECK", "HAS_EV_NOTE", "EV_NOTE", "EV_DONE"],
+            k => /^\s*\$\s*$|💲|💵/.test(k) || /ev_?check|ev_?note|ev_?done/i.test(k)),
     priority: RULES.priorityColumn || findCol(keys, ["PRIORITY_FLAG", "PRIORITY"]) || byValues(/^p\d$/i),
     bucket: findCol(keys, ["BUCKET"]),
     category: findCol(keys, ["CATEGORY"]),
@@ -609,10 +1027,11 @@ function demoRows() {
 }
 
 function demoToday() {
+  // obviously-fake round numbers so demo can never be mistaken for live Metabase data
   return [
-    ["customers", 734], ["customers_raw", 542], ["customers_pregraded", 192],
-    ["slab_packs", 1374], ["slab_packs_raw", 880], ["slab_packs_pregraded", 494],
-    ["total_cards", 2108], ["slab_packs_raw_ev_completed", 272], ["customers_raw_reviewed", 522],
+    ["customers", 300], ["customers_raw", 200], ["customers_pregraded", 100],
+    ["slab_packs", 1500], ["slab_packs_raw", 500], ["slab_packs_pregraded", 1000],
+    ["total_cards", 1800], ["slab_packs_raw_ev_completed", 250], ["customers_raw_reviewed", 150],
   ].map(([METRIC, CURRENT_TOTAL]) => ({ METRIC, CURRENT_TOTAL }));
 }
 
@@ -637,6 +1056,7 @@ async function loadToday() {
 let rangeTimer, rangeState = "";   // "", "loading", "ok", "unsupported", "error"
 function scheduleRangeFetch() { clearTimeout(rangeTimer); rangeTimer = setTimeout(fetchRange, 250); }
 async function fetchRange() {
+  loadTeamData();
   if (forcedDemo || demoMode) { rangeState = saved.start && saved.end ? "demo" : ""; return render(); }
   const qs = saved.start && saved.end ? `&start=${saved.start}&end=${saved.end}` : "";
   rangeState = qs ? "loading" : ""; render();
@@ -662,6 +1082,7 @@ async function load() {
       fetch(`/api/metabase?q=today${saved.start && saved.end ? `&start=${saved.start}&end=${saved.end}` : ""}`, { cache: "no-store" }).catch(() => null),
     ]);
     const body = await res.json().catch(() => ({}));
+    if (res.status === 401) { refreshing = false; return showGate("login"); }
     if (!res.ok) throw new Error(body.error || `Request failed (${res.status})`);
     if (todayRes && todayRes.ok) {
       const tb = await todayRes.json().catch(() => null);
@@ -673,6 +1094,7 @@ async function load() {
     hasLive = true;
     refreshing = false;
     ingest(all, body.fetchedAt);
+    loadTeamData();
   } catch (err) {
     refreshing = false;
     loadError = err.message;
@@ -680,7 +1102,9 @@ async function load() {
     else { demoMode = true; todayRows = demoToday(); ingest(demoRows(), null, true); }
   }
 }
+let rawFirst = null;   // first raw row, to show column names if something can't be matched
 function ingest(data, at, demo = false) {
+  rawFirst = data[0] || null;
   if (!demo) { demoMode = false; loadError = ""; }
   cols = detectColumns(data);
   rows = data.map(model);
@@ -722,7 +1146,8 @@ function render() {
   const n = $("notice");
   if (!fetchedAt) { if (currentView === "queue") renderQueue(rows); return; }
   n.className = "notice";
-  const missing = rows.length && !cols.done && !cols.ev ? ` <span>Couldn’t find the $ or ✅ column — set RULES.evColumn / RULES.doneColumn.</span>` : "";
+  const lost = rows.length ? [["✅", cols.done], ["$", cols.ev], ["Review %", cols.review], ["EV %", cols.evPct], ["Status", cols.status], ["Full name", cols.name]].filter(x => !x[1]).map(x => x[0]) : [];
+  const missing = lost.length ? ` <details class="colcheck"><summary>Missing columns: ${lost.join(", ")}</summary><div>Columns Metabase sent: ${Object.keys(rawFirst || {}).map(k => `<code>${k}</code>`).join(" ")}</div></details>` : "";
   n.innerHTML = `
     <span><b>${fmt(queue.length)}</b> orders in queue</span>
     <span class="ready"><b>${fmt(doneRows.length)}</b> ready to pass off</span>${missing}
@@ -730,11 +1155,13 @@ function render() {
     ${demoMode ? `<span class="demo">Demo data${loadError ? ` — couldn’t reach Metabase (${loadError})` : ""}</span>` : ""}
     ${!demoMode && loadError ? `<span class="demo">Last refresh failed (${loadError}) — showing ${fetchedAt ? fetchedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "earlier"} data</span>` : ""}
     <span class="spacer"></span>
-    ${demoMode ? `<button id="load-csv">Load CSV</button>` : ""}
+    ${demoMode && can("refresh") ? `<button id="load-csv">Load CSV</button>` : ""}
+    ${isAdmin() ? `<button id="add-user" class="add-user" title="Invite someone and set what they can do">+ Add user</button>` : ""}
     <span class="updated">${fetchedAt ? "Updated " + fetchedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}</span>
-    <button id="refresh" ${refreshing ? "disabled" : ""} title="Re-run All Orders (PL) and the 46135 totals in Metabase">${refreshing ? "Refreshing…" : "Refresh Metabase"}</button>`;
+    <button id="refresh" ${refreshing ? "disabled" : ""} ${can("refresh") ? "" : "hidden"} title="Re-run All Orders (PL) and the 46135 totals in Metabase">${refreshing ? "Refreshing…" : "Refresh Metabase"}</button>`;
   $("refresh").onclick = load;
   if ($("load-csv")) $("load-csv").onclick = () => $("csv").click();
+  if ($("add-user")) $("add-user").onclick = () => { goView("users"); setTimeout(() => $("inv-name").focus(), 50); };
   document.title = `(${queue.length}) PL Metric Daily`;
   $("brand-sub").textContent = `Precision Labeling · ${new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}${fetchedAt ? ` · updated ${fetchedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : ""}`;
   $("queue-tab-count").textContent = fmt(queue.length);
@@ -833,6 +1260,7 @@ function render() {
     </article>`;
   }).join("");
   if (activeId && activeId.startsWith("target-") && $(activeId)) $(activeId).focus();
+  if (!can("targets")) document.querySelectorAll("#tiles .target").forEach(el => { el.readOnly = true; el.title = "Ask an admin for “Edit targets & dates”"; });
 
   if (currentView === "queue") { renderQueue(rows); queueDirty = false; } else queueDirty = true;
   scheduleFit();
@@ -992,68 +1420,1245 @@ function setPressed(id, attr, val) {
 }
 
 
-/* ---------- Team view ----------
-   Members per team with today's count and a daily target. Saved in this browser. */
-const TEAMS = [
-  { key: "oregon", label: "Oregon Team", logo: "oregon", color: "--orange" },
-  { key: "pl",     label: "PL Team",     logo: "pl",     color: "--ok" },
+/* ---------- Team (Metabase 46168 + admin edits saved in Neon) ----------
+   46168: USER_ID · FULL_NAME · ROLE · EMAIL · LAST_ACTIVITY_PT · TASKS_LAST_14D
+   Everyone from 46168 starts on the Oregon team; anyone whose role has "Director" sits above both teams.
+   Admins can change anyone's name, role, team, hide them, or add people by hand (e.g. the PL team). */
+const TEAM_DEFS = {
+  director: { label: "Director · Oregon + PL", logos: ["oregon", "pl"], c: "" },
+  oregon:   { label: "Oregon Team", logos: ["oregon"], c: "--orange" },
+  pl:       { label: "PL Team",     logos: ["pl"],     c: "--ok" },
+};
+const TEAM_ORDER = ["director", "oregon", "pl"];
+const DEFAULT_46168_TEAM = "oregon";
+let teamRows = null, teamErr = "", lbMetric = null, lbQuery = "", teamEdits = {}, editingTeam = false;
+const RANK_COLORS = ["#ffd54a", "#cfd8e3", "#e0965a"];
+const AVATAR_COLORS = ["#39ff14", "#7cf0ff", "#ffb84d", "#ff7ab6", "#a98bff", "#5dffa8", "#ffe14d", "#7ab8ff"];
+const prettyCol = k => String(k).replace(/_/g, " ").toLowerCase().replace(/\b\w/g, m => m.toUpperCase())
+  .replace(/\bEv\b/g, "EV").replace(/\bAc\b/g, "AC").replace(/\bPl\b/g, "PL").replace(/ (\d+)d\b/i, " $1D").replace(/Last (\d+)D/, "Last $1 Days");
+const initials = n => String(n).replace(/@.*/, "").split(/[\s._-]+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || "?";
+const hashIdx = (t, n) => { let h = 0; for (const c of String(t)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % n; };
+// LAST_ACTIVITY_PT is Pacific time without a zone → compare it against "now" in Pacific time
+const nowPT = () => new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+const minsAgo = d => {
+  if (!d) return null;
+  const str = String(d), hasZone = /Z$|[+-]\d\d:?\d\d$/.test(str);
+  const t = new Date(hasZone ? str : str.replace(" ", "T").replace(/Z?$/, ""));
+  return isNaN(t) ? null : Math.max(0, Math.round(((hasZone ? Date.now() : nowPT()) - t) / 60000));
+};
+const ago = d => {
+  if (!d) return "";
+  const str = String(d);
+  const hasZone = /Z$|[+-]\d\d:?\d\d$/.test(str);
+  const t = new Date(hasZone ? str : str.replace(" ", "T").replace(/Z?$/, ""));
+  if (isNaN(t)) return "";
+  const m = Math.round(((hasZone ? Date.now() : nowPT()) - t) / 60000);
+  return m < 1 ? "active now" : m < 60 ? `active ${m}m ago` : m < 1440 ? `active ${Math.round(m / 60)}h ago` : `active ${Math.round(m / 1440)}d ago`;
+};
+function teamShape(rs) {
+  const keys = Object.keys(rs[0] || {});
+  const pick = (names, re) => keys.find(k => names.includes(k.toUpperCase())) || (re ? keys.find(k => re.test(k)) : undefined);
+  const isNum = k => rs.some(r => r[k] !== null && r[k] !== "" && !isNaN(Number(r[k]))) && rs.every(r => r[k] === null || r[k] === "" || !isNaN(Number(r[k])));
+  const name = pick(["FULL_NAME", "NAME", "USER_NAME", "DISPLAY_NAME"], /name/i) || pick([], /email/i);
+  return {
+    key: pick(["USER_ID", "ID"], /(^|_)id$/i) || pick(["EMAIL"]) || name,
+    name, role: pick(["ROLE", "TITLE", "JOB_TITLE", "POSITION"], /role|title/i), email: pick(["EMAIL"], /email/i),
+    team: pick(["TEAM", "LOCATION", "SITE"], /team|location|site/i), seen: pick(["LAST_ACTIVITY_PT", "LAST_ACTIVITY"], /last_?activ|last_?seen/i),
+    nums: keys.filter(k => isNum(k) && !/(^|_)id$|^id_|uuid|phone|zip/i.test(k)),
+  };
+}
+async function loadTeamEdits() {
+  if (!me) return;
+  try { const d = await api("/api/team"); teamEdits = Object.fromEntries(d.people.map(p => [p.key, p])); } catch {}
+}
+async function loadTeamData() {
+  if (forcedDemo || demoMode) { teamRows = demoTeam(); teamErr = ""; return renderLeaderboard(); }
+  try {
+    const qs = saved.start && saved.end ? `&start=${saved.start}&end=${saved.end}` : "";
+    const [r] = await Promise.all([fetch(`/api/metabase?q=team${qs}`, { cache: "no-store" }), loadTeamEdits()]);
+    const b = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(b.error || `Request failed (${r.status})`);
+    teamRows = expandRows(b); teamErr = "";
+  } catch (e) { teamErr = e.message; if (!teamRows) teamRows = []; }
+  renderLeaderboard();
+}
+function demoTeam() {
+  return [
+    ["2290bf05", "Alan Bailey", "Director of Grading", "alan@arenaclub.com", 10916],
+    ["3bd53f98", "Austin Crawford", "Review Manager", "austin.crawford@arenaclub.com", 870],
+    ["4227b9f8", "Mikayla Flood", "Review Lead", "mikayla.flood@arenaclub.com", 2772],
+    ["52fd7ce5", "Jordan Hunt", "Senior Reviewer", "jordan.hunt@arenaclub.com", 1771],
+    ["f862646a", "Dustin Nolasco", "Reviewing Associate", "dnolasco@arenaclub.com", 1768],
+    ["efc2d866", "Lea Alan DeBruin", "Review Associate", "ldebruin@arenaclub.com", 3829],
+    ["445116c9", "Ludpitka Huerta", "Review Associate", "lhuerta@arenaclub.com", 6596],
+    ["15d789ff", "Kaity Paul", "Reviewer Jr.", "kaity.paul@arenaclub.com", 2937],
+    ["240b7d88", "Arman Abonitalla", "Review Associate", "arman.abonitalla@arenaclub.com", 6050],
+  ].map(([USER_ID, FULL_NAME, ROLE, EMAIL, TASKS_LAST_14D], i) =>
+    ({ USER_ID, FULL_NAME, ROLE, EMAIL, LAST_ACTIVITY_PT: new Date(Date.now() - (i * 7 + 1) * 60000).toISOString(), TASKS_LAST_14D }));
+}
+// one list of people: Metabase rows + admin edits + people added by hand
+function teamPeople() {
+  const sh = teamShape(teamRows || []);
+  const out = (teamRows || []).map(r => {
+    const key = String(r[sh.key] ?? r[sh.name] ?? "");
+    const e = teamEdits[key] || {};
+    const role = e.role ?? (sh.role ? r[sh.role] : "") ?? "";
+    const fromMb = sh.team ? String(r[sh.team] || "").toLowerCase() : "";
+    const autoTeam = /director/i.test(role) ? "director" : /pl|precision|label/.test(fromMb) ? "pl" : /oregon|review/.test(fromMb) ? "oregon" : DEFAULT_46168_TEAM;
+    return { key, name: e.name || r[sh.name] || "—", role, email: e.email || (sh.email ? r[sh.email] : ""), team: e.team || autoTeam,
+             hidden: !!e.hidden, edited: !!teamEdits[key], manual: false, seen: sh.seen ? r[sh.seen] : null,
+             nums: Object.fromEntries(sh.nums.map(k => [k, num(r[k])])) };
+  });
+  // PL roster ⟷ 46168: when a roster person is also in 46168 (same name, or same first + last name, or email),
+  // they stay on the PL list with their roster dept/title/tier/manager, and pick up USER_ID, email, last active and tasks.
+  const firstLast = n => { const w = slug(n).split("-").filter(x => x.length > 1 && !/^(jr|sr|ii|iii|ma)$/.test(x)); return w.length ? w[0] + "|" + w[w.length - 1] : ""; };
+  const byName = new Map(), byFL = new Map(), byMail = new Map();
+  out.forEach(p => {
+    byName.set(slug(p.name), p);
+    const fl = firstLast(p.name); if (fl) byFL.set(fl, byFL.has(fl) ? null : p);      // ambiguous first+last → no match
+    if (p.email) byMail.set(String(p.email).toLowerCase().split("@")[0].replace(/[^a-z]/g, ""), p);
+  });
+  const claimed = new Set();
+  PL_ROSTER.forEach(([name, dept, title, tier, reports]) => {
+    const key = "pl:" + slug(name);
+    const e = teamEdits[key] || {};
+    const mb = byName.get(slug(name)) || byFL.get(firstLast(name)) || null;
+    if (mb) claimed.add(mb.key);
+    out.push({ key, name: e.name || name, role: e.role ?? title, email: e.email || mb?.email || "", team: e.team || "pl", dept: e.dept || dept,
+      tier: e.tier || tier, reports: e.reports_to ?? reports, hidden: !!e.hidden, edited: !!teamEdits[key], manual: false, roster: true,
+      seen: mb?.seen ?? null, nums: mb?.nums || {}, mbUserId: mb ? mb.key : "" });
+  });
+  for (let i = out.length - 1; i >= 0; i--) if (claimed.has(out[i].key) && !out[i].roster) out.splice(i, 1);
+  out.forEach(p => { const e = teamEdits[p.key]; if (e && !p.roster) { if (e.dept) p.dept = e.dept; if (e.tier) p.tier = e.tier; if (e.reports_to) p.reports = e.reports_to; } });
+  Object.values(teamEdits).filter(e => e.manual).forEach(e => out.push({ key: e.key, name: e.name, role: e.role || "", email: e.email || "", team: e.team || "pl",
+    dept: e.dept || "", tier: e.tier || "", reports: e.reports_to || "", hidden: !!e.hidden, edited: true, manual: true, seen: null, nums: {} }));
+  out.forEach(p => {
+    const e = teamEdits[p.key] || {};
+    p.sort = e.sort ?? null;
+    try { p.skills = e.skills ? JSON.parse(e.skills) : (SKILL_SEED[slug(p.name)] || null); } catch { p.skills = null; }
+    try { p.presets = e.presets ? JSON.parse(e.presets) : null; } catch { p.presets = null; }
+    try { p.pushed = e.pushed ? JSON.parse(e.pushed) : {}; } catch { p.pushed = {}; }
+    // Oregon people come from 46168, whose key IS their admin USER_ID; PL people get it typed in
+    p.adminUserId = e.admin_user_id || p.mbUserId || (!p.roster && !p.manual && /^[0-9a-f]{8}-[0-9a-f-]{4,}$/i.test(p.key) ? p.key : "");
+    p.edited = !!(e.name || e.role || e.team || e.dept || e.tier || e.reports_to || e.hidden || e.manual);
+  });
+  lastPeople = Object.fromEntries(out.map(p => [p.key, p]));
+  return { sh, people: out };
+}
+const TEAM_SIMPLE = true;   // Team tab shows names and roles only (no avatars, ranks, bars or counts)
+function personRow(p, i, metric, max, admin, noRank) {
+  if (TEAM_SIMPLE) return simpleRow(p, admin, i);
+  const v = metric ? num(p.nums[metric]) : 0;
+  const others = Object.keys(p.nums).filter(k => k !== metric).map(k => `<span>${esc(prettyCol(k))} <b>${fmt(p.nums[k])}</b></span>`).join("");
+  const rankable = !noRank && metric && metric in p.nums;
+  const edit = admin && editingTeam ? `<div class="lb-edit-row" data-key="${esc(p.key)}">
+      <input data-f="name" value="${esc(p.name)}" aria-label="Name" placeholder="Name">
+      <input data-f="role" value="${esc(p.role)}" aria-label="Role" placeholder="Role / title">
+      <select data-f="team" aria-label="Team">${TEAM_ORDER.map(t => `<option value="${t}"${p.team === t ? " selected" : ""}>${t === "director" ? "Director (both)" : TEAM_DEFS[t].label}</option>`).join("")}</select>
+      <div class="acts">
+        <label><input type="checkbox" data-f="hidden"${p.hidden ? " checked" : ""}> Hide</label>
+        <button class="row-btn" data-save="${esc(p.key)}">Save</button>
+        ${p.manual ? `<button class="row-btn danger" data-del="${esc(p.key)}">Delete</button>` : p.edited ? `<button class="row-btn" data-reset="${esc(p.key)}" title="Use Metabase values again">Undo edits</button>` : ""}
+      </div>
+    </div>` : "";
+  return `<li class="lb-row${p.hidden ? " is-hidden" : ""}" style="--av:${AVATAR_COLORS[hashIdx(p.name, AVATAR_COLORS.length)]};${i < 3 && rankable ? `--rk:${RANK_COLORS[i]}` : ""}">
+    <span class="lb-rank">${rankable ? (i < 3 ? ["🥇", "🥈", "🥉"][i] : i + 1) : noRank ? "★" : "•"}</span>
+    <span class="lb-av" aria-hidden="true">${esc(initials(p.name))}</span>
+    <div class="lb-who">
+      <div class="lb-name">${esc(p.name)}</div>
+      <div class="lb-role">${esc(p.role || "")}${p.seen ? ` <span class="lb-seen">· ${esc(ago(p.seen))}</span>` : ""}</div>
+      ${others ? `<div class="lb-sub">${others}</div>` : ""}
+      ${rankable ? `<div class="lb-bar"><span style="width:${(v / max) * 100}%"></span></div>` : ""}
+    </div>
+    <span class="lb-val">${metric && metric in p.nums ? `${fmt(v)}<small>${esc(prettyCol(metric))}</small>` : ""}</span>
+    ${edit}
+  </li>`;
+}
+const PL_ROSTER = [  // name · dept · title · tier · reports to  (edit in Team → click a name)
+  ["Karl Calma", "Lead", "Team Manager", "Prime", "Alan Bailey"],
+  ["Marco Clarin", "CS", "CS Lead", "Pro", "Karl Calma"],
+  ["Ehm Crucillo", "Review", "Senior Review Annotator", "Elite", "Karl Calma"],
+  ["Peds Magat", "Data", "Senior Data Annotator", "Elite", "Karl Calma"],
+  ["Domingo Bautista Jr.", "CS", "Junior CSR", "Prime", "Marco Clarin"],
+  ["Constancio Adao Jr.", "CS", "CSR 5", "Pro", "Marco Clarin"],
+  ["Nico Andrade", "Items", "Items Lead", "Elite", "Peds Magat"],
+  ["Abe Dato", "Grading", "Junior Grading Annotator", "Pro", "Ehm Crucillo"],
+  ["Jensen Manalastas", "Recomp", "Recomp Lead", "Elite", "Karl Calma"],
+  ["Dominic Bediones", "Review", "Review Annotator 4", "Prime", "Ehm Crucillo"],
+  ["Mark Erwin Salvador", "Review", "Review Annotator 4", "Prime", "Ehm Crucillo"],
+  ["Laurize Anne Malinao", "CS", "CSR 4", "Pro", "Marco Clarin"],
+  ["Jan Raymond Padrinao", "Review", "Review Annotator 4", "Prime", "Ehm Crucillo"],
+  ["Laurence Fabroa Dapon", "Data", "Data Annotator 4", "Prime", "Peds Magat"],
+  ["Rose Ann Santiago Navarro", "Review", "Review Annotator 3", "Elite", "Ehm Crucillo"],
+  ["Rence Tang", "Review", "Review Annotator 3", "Elite", "Ehm Crucillo"],
+  ["Pat Castillo", "Review", "Review Annotator 3", "Prime", "Ehm Crucillo"],
+  ["Ma. Julaila H. Castillo", "Data", "Data Annotator 3", "Prime", "Karl Calma"],
+  ["Erys de Leon", "Review", "Review Annotator 3", "Prime", "Ehm Crucillo"],
+  ["Xerxia Ledesma Buena", "Review", "Review Annotator 3", "Prime", "Ehm Crucillo"],
+  ["Queenie Arellano Guerrero", "Grading", "Grading Annotator 3", "Prime", "Ehm Crucillo"],
+  ["Ramy Manansala de Jesus", "Data", "Data Annotator 4", "Prime", "Peds Magat"],
+  ["Adrian Carlo Sanchez Pangga", "Data", "Data Annotator 4", "Prime", "Peds Magat"],
+  ["Gino Esguerra Policarpio", "Recomp", "Recomp Annotator 2", "Elite", "Jensen Manalastas"],
+  ["Charles Pellas", "Data", "Data Annotator 3", "Prime", "Peds Magat"],
+  ["Joshua Ryan Pacia Sacramento", "Recomp", "Recomp Annotator 2", "Elite", "Jensen Manalastas"],
+  ["Alexis Nunal Arcangel", "Grading", "Grading Annotator 2", "Elite", "Ehm Crucillo"],
+  ["Luvy Bunga", "CS", "CSR 2", "Elite", "Marco Clarin"],
+  ["Louise Pauline Capistrano", "CS", "CSR 2", "Elite", "Marco Clarin"],
+  ["Jairho Orillaza", "Grading", "Grading Annotator 2", "Elite", "Ehm Crucillo"],
+  ["Jasmin Levantino Banaban", "Review", "Review Annotator 3", "Prime", "Ehm Crucillo"],
+  ["Aaron Adrianne Joaquin", "Recomp", "Recomp Annotator 1", "Elite", "Jensen Manalastas"],
+  ["Ben Bueno", "Data", "Data Annotator 1", "Elite", "Peds Magat"],
+  ["Nelzon Cleofas Litrero", "Data", "Data Annotator 1", "Elite", "Peds Magat"],
+  ["Ian Rey Yandra Fajardo", "Data", "Data Annotator 1", "Elite", "Peds Magat"],
+  ["Neil Darrel Tepora", "Recomp", "Recomp Annotator 1", "Elite", "Jensen Manalastas"],
+  ["Emmanuel Serrona Queipo", "Data", "Data Annotator 1", "Elite", "Peds Magat"],
+  ["Cyrist V. Leviste", "Grading", "Grading Annotator 1", "Elite", "Ehm Crucillo"],
+  ["Laimer King De Guzman", "Data", "Data Annotator 1", "Pro", "Peds Magat"],
+  ["Calvin P. Caceres", "Data", "Data Annotator 1", "Pro", "Peds Magat"],
+  ["John Thomas Arcilla", "Recomp", "Recomp Annotator 1", "Pro", "Jensen Manalastas"],
+  ["Mark Jonel C. Najera", "Data", "Data Annotator 1", "Pro", "Peds Magat"],
+  ["Catherine B. Yap", "Grading", "Grading Annotator 1", "Pro", "Ehm Crucillo"],
+  ["John Carlo Lazaro", "Grading", "Grading Annotator 1", "Pro", "Ehm Crucillo"],
+  ["Ma. Carmela A. Alvaro", "Grading", "Grading Annotator 1", "Pro", "Ehm Crucillo"],
+  ["Ericah Depcy A. Doloso", "Grading", "Grading Annotator 1", "Pro", "Ehm Crucillo"],
+  ["Lean Almogino Joson", "Data", "Data Annotator 1", "Pro", "Peds Magat"],
+  ["Klein Stewart Ferreras", "Grading", "Grading Annotator 1", "Pro", "Ehm Crucillo"],
+  ["Alyssa Mae B. Isleta", "Grading", "Grading Annotator 1", "Pro", "Ehm Crucillo"],
+  ["Myriam B. Dizon", "Grading", "Grading Annotator 1", "Pro", "Ehm Crucillo"],
+  ["Princess Paragas", "Grading", "Grading Annotator 1", "Prime", "Ehm Crucillo"],
+  ["Carlo Jay Copada", "Grading", "Grading Annotator 1", "Prime", "Ehm Crucillo"],
+  ["Estefhany M. Mangaring", "Grading", "Grading Annotator 1", "Prime", "Ehm Crucillo"],
+  ["Josh Naoki Santos Mercado", "Grading", "Grading Annotator 1", "Prime", "Ehm Crucillo"],
+  ["April Jacob Jayson Villamor", "Grading", "Grading Annotator 1", "Prime", "Ehm Crucillo"],
+  ["Jeric Montajos", "Grading", "Grading Annotator 1", "Prime", "Ehm Crucillo"],
+  ["Kim Judyver Rombaon Marquizo", "Grading", "Grading Annotator 1", "Prime", "Ehm Crucillo"],
+  ["Blaise C. Endico", "Recomp", "Recomp Annotator 1", "Prime", "Jensen Manalastas"],
+  ["Joshua Wilson Dela Cruz", "Recomp", "Recomp Annotator 1", "Prime", "Jensen Manalastas"],
+  ["Ian Benedict Banua", "Recomp", "Recomp Annotator 1", "Prime", "Jensen Manalastas"],
+  ["Rusty Khent Saludo", "Recomp", "Recomp Annotator 1", "Prime", "Jensen Manalastas"],
+  ["Kean Sta. Ana", "Recomp", "Recomp Annotator 1", "Prime", "Jensen Manalastas"],
+  ["Ryan Paul Borsigue", "Recomp", "Recomp Annotator 1", "Prime", "Jensen Manalastas"],
+  ["Aljen Magat", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["One David Dizon", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Jose Marie Arcilla", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Khim Pauline Arcilla", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Camille Meneses", "Items", "Item Annotator 1", "Prime", "Peds Magat"],
+  ["John Paulo Pante", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Jommel Nichole Javier", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Maria Regina Moreto", "Items", "Item Annotator 1", "Prime", "Peds Magat"],
+  ["Romelynn Faith Anches", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Sheila Marie A. Doldig", "Items", "Item Annotator 1", "Prime", "Peds Magat"],
+  ["Ramoncito B. Lacaba", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Marsen Lauren A. Hernandez", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Mhike Joshua Mendoza", "Items", "Item Annotator 1", "Prime", "Peds Magat"],
+  ["Michaela Cruz", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Princess Cabalar", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Carmen Cortez", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["KJ Villanueva", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Vince Alfred Fernandez", "Items", "Item Annotator 1", "Prime", "Peds Magat"],
+  ["Maher Calingasan", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Abraham Salisi", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Richard Cater", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Ron Earlnick Opelanio", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Joseph Anthony Somera", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Elaine Joy Paracuelles Mayol", "Community", "Community Annotator 4", "Prime", "Karl Calma"],
+  ["Denise Concepcion Fernandez Solon", "Community", "Community Annotator 1", "Prime", "Karl Calma"],
+  ["Ranie Mae Ecat Revuelta", "Community", "Community Annotator 1", "Prime", "Karl Calma"],
+  ["Inah Marie Isleta Gicanal", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Justine Bacaresas Alampay", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Anjello Libiran Bumanglag", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Ivan Ferreras", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Rica Marie Salamero Reyes", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["John Michael Geroso Macasaya", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Eugene Richard Rusios Acaba", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Donald Panlilio Quinones", "Grading", "Grading Annotator 1", "Prime", "Ehm Crucillo"],
+  ["Rodelyne Gravo Santos", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Rodjie Escuro", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Quennie Rose Lozano", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Remzen Karla Palo", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Irish Gonzales", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Russell Cabang", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Jhon Ruzzel Gagaring", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Jay-R Salili", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Kayser Florence Wenceslao", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Rodel Ian Oliver Borromeo", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Abigael Calasin", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Eloisa Joyce Moyo", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Gerson Joseph Muyot", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Jamaica Bangcat", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Raquel Valdecantos", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Steven John Ignacio", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Tyrone Jerome Moraleda", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["John Michael Vincent Costales", "Data", "Data Annotator 1", "Prime", "Peds Magat"],
+  ["Jerome Dolar Ebron", "CS", "CSR 1", "Prime", "Marco Clarin"],
+  ["Ckashmere Kate Bernardo Barcelon", "CS", "CSR 1", "Prime", "Marco Clarin"],
+  ["Nona Banban Maligaya", "CS", "CSR 1", "Prime", "Marco Clarin"],
+  ["Almira Rose Sapitula Isleta", "CS", "CSR 1", "Prime", "Marco Clarin"],
+  ["Joann Amante Langurayan", "CS", "CSR 1", "Prime", "Marco Clarin"],
+  ["Wella Regencia Sadicon", "CS", "CSR 1", "Prime", "Marco Clarin"],
+  ["Francis Alvin Ibajo Genoso", "CS", "CSR 1", "Prime", "Marco Clarin"],
+  ["Maria Corazon Calasin Ramirez", "CS", "CSR 1", "Prime", "Marco Clarin"],
+  ["Catherine Iligan Asis", "CS", "CSR 1", "Prime", "Marco Clarin"],
+  ["Jorean Nabong Tapic", "CS", "CSR 1", "Prime", "Marco Clarin"],
+  ["Anthony Garcia Dela Cruz", "CS", "CSR 1", "Prime", "Marco Clarin"],
+  ["Agnes Arcangel", "CS", "CSR 1", "Prime", "Marco Clarin"],
+  ["John Ron Guantero Estipular", "CS", "CSR 1", "Prime", "Marco Clarin"],
+  ["Ohrvel", "CS", "CSR 1", "Prime", "Marco Clarin"],
 ];
-if (!saved.team) saved.team = { oregon: [], pl: [] };
-function renderTeam() {
-  let people = 0;
-  $("team-grid").innerHTML = TEAMS.map(t => {
-    const list = saved.team[t.key] || (saved.team[t.key] = []);
-    people += list.length;
-    const done = list.reduce((a, m) => a + (Number(m.done) || 0), 0);
-    const goal = list.reduce((a, m) => a + (Number(m.target) || 0), 0);
-    const rows = list.map((m, i) => {
-      const pct = m.target ? Math.min(100, (m.done || 0) / m.target * 100) : 0;
-      return `<tr>
-        <td><input data-team="${t.key}" data-i="${i}" data-f="name" value="${(m.name || "").replace(/"/g, "&quot;")}" placeholder="Name" aria-label="Name"></td>
-        <td><input data-team="${t.key}" data-i="${i}" data-f="role" value="${(m.role || "").replace(/"/g, "&quot;")}" placeholder="Role / station" aria-label="Role"></td>
-        <td class="n"><input class="numin" inputmode="numeric" data-team="${t.key}" data-i="${i}" data-f="done" value="${m.done ?? ""}" placeholder="0" aria-label="Done today"></td>
-        <td class="n"><input class="numin" inputmode="numeric" data-team="${t.key}" data-i="${i}" data-f="target" value="${m.target ?? ""}" placeholder="target" aria-label="Daily target"></td>
-        <td class="bar-cell"><div class="mini"><span style="width:${pct}%"></span></div></td>
-        <td class="n"><button class="rm" data-team="${t.key}" data-rm="${i}" title="Remove" aria-label="Remove">×</button></td>
-      </tr>`;
-    }).join("");
-    return `<article class="team-card" style="--c:var(${t.color})">
-      <header><h3>${t.label}</h3><img src="${TEAM_LOGOS[t.logo].src}" alt=""></header>
-      <div class="team-sum"><strong>${fmt(done)}</strong><span>${goal ? `of ${fmt(goal)} today · ${Math.round(done / goal * 100)}%` : "done today"}</span></div>
-      ${list.length ? `<div class="table-wrap"><table>
-        <thead><tr><th>Name</th><th>Role</th><th class="n">Done</th><th class="n">Target</th><th></th><th></th></tr></thead>
-        <tbody>${rows}</tbody></table></div>` : `<p class="empty-note">No one added yet.</p>`}
-      <button class="add" data-add="${t.key}">+ Add person</button>
+const SKILLS = [
+  "Crop", "Centering", "Corner", "Edge", "Surface", "Signature", "Card Type", "Card Hedge", "Review", "Review Premium",
+  "Verify Crop", "Verify Centering", "Verify Corner", "Verify Edge", "Verify Surface", "Verify Signature",
+  "Baseball Card Type", "Football Card Type", "Basketball Card Type", "Soccer Card Type", "Other Card Type", "Entertainment Card Type", "Tcg Card Type",
+  "Create Or Edit Set", "Verify Baseball Card Type", "Verify Football Card Type", "Verify Basketball Card Type", "Verify Soccer Card Type",
+  "Verify Other Card Type", "Verify Entertainment Card Type", "Verify Tcg Card Type", "Verify Create Set", "Estimate Value", "Verify Estimate Value",
+  "Merge", "Verify Review", "Release Order", "Process Order", "Assemble", "Slab", "Scan", "Checkout Vault", "Create Reject Order", "Ship Order",
+  "Customer Support", "Tech Support", "Authenticate", "View Grader Names", "Slab Pack", "Edit Skills", "View Orders", "View Assigned Tasks",
+  "Ac Offers Edit", "Ac Offers View", "Timebox", "View Items", "Process Items", "Edit Items", "Auctions Approve", "Coin Case", "Wine Drop",
+  "Purchase Orders", "Generic Items", "Hardware", "Impersonate", "Revault Items", "Move To Marketplace", "Mcp Access",
+];
+const SKILL_GROUPS = [
+  ["Grading", ["Crop", "Centering", "Corner", "Edge", "Surface", "Signature", "Card Type", "Card Hedge", "Review", "Review Premium"]],
+  ["Verify grading", ["Verify Crop", "Verify Centering", "Verify Corner", "Verify Edge", "Verify Surface", "Verify Signature", "Verify Review"]],
+  ["Card types", ["Baseball Card Type", "Football Card Type", "Basketball Card Type", "Soccer Card Type", "Other Card Type", "Entertainment Card Type", "Tcg Card Type"]],
+  ["Verify card types", ["Verify Baseball Card Type", "Verify Football Card Type", "Verify Basketball Card Type", "Verify Soccer Card Type", "Verify Other Card Type", "Verify Entertainment Card Type", "Verify Tcg Card Type"]],
+  ["Sets & value", ["Create Or Edit Set", "Verify Create Set", "Estimate Value", "Verify Estimate Value", "Merge"]],
+  ["Orders & vault", ["Release Order", "Process Order", "Assemble", "Slab", "Slab Pack", "Scan", "Authenticate", "Checkout Vault", "Create Reject Order", "Ship Order", "View Orders"]],
+  ["Items & marketplace", ["View Items", "Process Items", "Edit Items", "Generic Items", "Hardware", "Coin Case", "Wine Drop", "Purchase Orders", "Revault Items", "Move To Marketplace", "Auctions Approve", "Ac Offers Edit", "Ac Offers View"]],
+  ["Support & admin", ["Customer Support", "Tech Support", "View Grader Names", "View Assigned Tasks", "Timebox", "Edit Skills", "Impersonate", "Mcp Access"]],
+];
+// Starting point from the admin skills screen; anyone else starts "not set" until an admin ticks their skills
+const SKILL_SEED = {
+  "alan-bailey": Object.fromEntries(SKILLS.map(k => [k, !["Crop", "Centering", "Corner", "Edge", "Surface", "Signature", "Verify Crop", "Verify Centering",
+    "Verify Corner", "Verify Edge", "Verify Surface", "Verify Signature", "Auctions Approve", "Mcp Access"].includes(k)])),
+};
+let lastPeople = {}, lastTeamOrder = {};
+const PL_DEPTS = ["Lead", "CS", "Review", "Data", "Items", "Grading", "Recomp", "Community"];
+const PL_TIERS = ["Prime", "Pro", "Elite"];
+const slug = t => String(t).toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+let plDept = "all";
+// PL grouping: "dept" | "reports" | "tier" | "none" — remembered in this browser
+let plGroup = (saved.plGroup) || "dept";
+const plCollapsed = new Set(saved.plCollapsed || []);
+// Team cards fold/unfold from their logo — remembered in this browser
+const cardShut = new Set(saved.teamShut || []);
+const logoBtn = (t, def, n) => `<button type="button" class="logo-btn${cardShut.has(t) ? "" : " on"}" data-card-fold="${t}" aria-expanded="${!cardShut.has(t)}"
+  title="${cardShut.has(t) ? "Show" : "Hide"} ${esc(def.label)}">${def.logos.map(l => `<img src="${TEAM_LOGOS[l].src}" alt="">`).join("")}${cardShut.has(t) ? `<span class="fold-n">${n}</span>` : ""}</button>`;
+const GROUP_BY = { dept: "Dept", reports: "Reports to", tier: "Tier", none: "No groups" };
+let editingKey = null;   // person opened by clicking their name
+function editRow(p) {
+  const pl = p.team === "pl" || p.dept;
+  return `<div class="lb-edit-row${pl ? " pl" : ""}" data-key="${esc(p.key)}">
+      <input data-f="name" value="${esc(p.name)}" aria-label="Name" placeholder="Name">
+      <input data-f="role" value="${esc(p.role)}" aria-label="Title" placeholder="Role / title">
+      ${pl ? `<select data-f="dept" aria-label="Dept">${["", ...PL_DEPTS].map(d => `<option${(p.dept || "") === d ? " selected" : ""} value="${d}">${d || "— dept —"}</option>`).join("")}</select>
+      <select data-f="tier" aria-label="Tier">${["", ...PL_TIERS].map(t => `<option${(p.tier || "") === t ? " selected" : ""} value="${t}">${t || "— tier —"}</option>`).join("")}</select>
+      <input data-f="reports_to" value="${esc(p.reports || "")}" aria-label="Reports to" placeholder="Reports to" list="pl-leads">` : ""}
+      <select data-f="team" aria-label="Team">${TEAM_ORDER.map(t => `<option value="${t}"${p.team === t ? " selected" : ""}>${t === "director" ? "Director (both)" : TEAM_DEFS[t].label}</option>`).join("")}</select>
+      <div class="acts">
+        <label><input type="checkbox" data-f="hidden"${p.hidden ? " checked" : ""}> Hide</label>
+        <button class="row-btn" data-save="${esc(p.key)}">Save</button>
+        ${p.manual ? `<button class="row-btn danger" data-del="${esc(p.key)}">Delete</button>` : p.edited ? `<button class="row-btn" data-reset="${esc(p.key)}" title="Back to the original values">Undo edits</button>` : ""}
+        ${!editingTeam ? `<button class="row-btn" data-close="1">Cancel</button>` : ""}
+      </div>
+    </div>`;
+}
+function plRow(p, admin, i = 0) {
+  const open = admin && editingTeam;
+  return `<tr class="${p.hidden ? "is-hidden" : ""}${open ? " open" : ""}" data-drag-key="${esc(p.key)}" ${admin && !p.hidden ? 'draggable="true"' : ""}>
+    ${admin ? `<td class="ord-cell">${ordCell(p, i, admin)}</td>` : ""}
+    <td class="pl-name"><button class="tm-link" data-person="${esc(p.key)}" title="Open">${esc(p.name)}</button>${canEditTeam() ? `<button class="row-edit" data-person-edit="${esc(p.key)}" title="Edit ${esc(p.name)}" aria-label="Edit ${esc(p.name)}">✎ Edit</button>` : ""}</td>
+    <td>${p.dept ? `<span class="dept d-${slug(p.dept)}">${esc(p.dept)}</span>` : ""}</td>
+    <td>${esc(p.role || "")}</td>
+    <td>${p.tier ? `<span class="tier t-${slug(p.tier)}">${esc(p.tier)}</span>` : ""}</td>
+    <td class="pl-rep">${esc(p.reports || "")}</td>
+  </tr>${open ? `<tr class="open"><td colspan="${admin ? 6 : 5}">${editRow(p)}</td></tr>` : ""}`;
+}
+const ordCell = (p, i, admin) => admin && !p.hidden ? `<span class="ord"><span class="grip" aria-hidden="true" title="Drag to move">⠿</span>
+  <input class="ord-num" type="text" inputmode="numeric" value="${i + 1}" data-ord-key="${esc(p.key)}" aria-label="Position of ${esc(p.name)}"></span>` : "";
+function simpleRow(p, admin, i = 0) {
+  const open = admin && editingTeam;
+  const mins = minsAgo(p.seen);
+  const live = mins != null && mins < 5;
+  const taskKey = Object.keys(p.nums).find(k => /task/i.test(k)) || Object.keys(p.nums)[0];
+  return `<li class="tm-row${p.hidden ? " is-hidden" : ""}${open ? " open" : ""}${admin ? " can-drag" : ""}" data-drag-key="${esc(p.key)}" ${admin && !p.hidden ? 'draggable="true"' : ""}>
+    ${ordCell(p, i, admin)}
+    <div class="tm-who">
+      <div class="tm-name"><button class="tm-link" data-person="${esc(p.key)}" title="Open">${esc(p.name)}</button>${canEditTeam() ? `<button class="row-edit" data-person-edit="${esc(p.key)}" title="Edit ${esc(p.name)}" aria-label="Edit ${esc(p.name)}">✎ Edit</button>` : ""}</div>
+      <div class="tm-role">${esc(p.role || "")}</div>
+    </div>
+    <div class="tm-seen${live ? " live" : ""}">${p.seen ? `${live ? `<span class="live-dot" aria-hidden="true"></span>` : ""}${esc(ago(p.seen))}` : ""}</div>
+    <div class="tm-tasks">${taskKey ? `${fmt(p.nums[taskKey])}<small>${esc(prettyCol(taskKey))}</small>` : ""}</div>
+    ${open ? editRow(p) : ""}
+  </li>`;
+}
+function renderLeaderboard() {
+  const note = $("lb-note");
+  const admin = isAdmin();
+  $("lb-edit").hidden = !admin;
+  $("lb-edit").setAttribute("aria-pressed", editingTeam);
+  $("lb-edit").textContent = editingTeam ? "Done editing" : "Edit team";
+  if (!teamRows) { note.textContent = teamErr ? `Couldn’t load the team (${teamErr}).` : "Loading team…"; $("lb-grid").innerHTML = ""; return; }
+  const { sh, people } = teamPeople();
+  if (!lbMetric || !sh.nums.includes(lbMetric)) lbMetric = sh.nums[0] || null;
+  note.textContent = teamErr ? `Last refresh failed (${teamErr}) — showing earlier list.` : (demoMode || forcedDemo ? "Demo copy of Metabase 46168 — edits save once you’re live." : "");
+  $("lb-metrics").innerHTML = TEAM_SIMPLE ? "" : sh.nums.map(k => `<button data-lbm="${esc(k)}" aria-pressed="${k === lbMetric}">${esc(prettyCol(k))}</button>`).join("");
+  const ql = lbQuery.toLowerCase();
+  const match = p => !ql || `${p.name} ${p.role} ${p.email} ${p.dept || ""} ${p.tier || ""} ${p.reports || ""}`.toLowerCase().includes(ql);
+  const shown = people.filter(p => match(p) && !p.hidden);
+  $("lb-count").textContent = `${shown.length} ${shown.length === 1 ? "person" : "people"}`;
+  $("lb-grid").innerHTML = TEAM_ORDER.map(t => {
+    const def = TEAM_DEFS[t];
+    const list = shown.filter(p => p.team === t).sort((a, b) => (a.sort ?? 1e6) - (b.sort ?? 1e6) ||
+      (TEAM_SIMPLE ? a.name.localeCompare(b.name) : num(b.nums[lbMetric]) - num(a.nums[lbMetric]) || a.name.localeCompare(b.name)));
+    if (!list.length && !(admin && editingTeam) && t === "director") return "";
+    const max = Math.max(1, ...list.map(p => num(p.nums[lbMetric])));
+    const total = list.reduce((a, p) => a + num(p.nums[lbMetric]), 0);
+    lastTeamOrder[t] = list.map(p => p.key);
+    if (t === "pl") return renderPLCard(list, admin, def);
+    const add = admin && editingTeam ? `<form class="lb-add" data-add-team="${t}">
+        <input name="name" placeholder="Name" required aria-label="Name"><input name="role" placeholder="Role / title" aria-label="Role">
+        <input name="email" type="email" placeholder="Email (optional)" aria-label="Email"><button class="row-btn" type="submit">+ Add</button></form>` : "";
+    return `<article class="lb-card ${t}${cardShut.has(t) ? " shut" : ""}" ${def.c ? `style="--c:var(${def.c})"` : ""}>
+      <header><h3>${def.label}</h3>${!TEAM_SIMPLE && t !== "director" && lbMetric ? `<span class="sum">${fmt(total)}</span>` : ""}${logoBtn(t, def, list.length)}</header>
+      ${cardShut.has(t) ? "" : list.length ? `<ol class="lb-list" data-team="${t}">${list.map((p, i) => personRow(p, i, lbMetric, max, admin, t === "director")).join("")}</ol>` : `<p class="lb-empty">No one on this team yet.</p>`}
+      ${cardShut.has(t) ? "" : add}
     </article>`;
   }).join("");
-  $("team-count").textContent = `${people} ${people === 1 ? "person" : "people"}`;
+  const hiddenList = people.filter(p => p.hidden && match(p));
+  $("lb-hidden").innerHTML = admin && hiddenList.length ? `<details class="lb-hidden-list"${editingTeam ? " open" : ""}><summary>Hidden (${hiddenList.length})</summary>
+    <ol class="lb-list">${hiddenList.map((p, i) => personRow(p, i, lbMetric, 1, admin, true)).join("")}</ol></details>` : "";
 }
-$("team-grid").addEventListener("change", e => {
-  const el = e.target; if (!el.dataset.f) return;
-  const m = saved.team[el.dataset.team][+el.dataset.i];
-  m[el.dataset.f] = el.classList.contains("numin") ? (el.value.replace(/[^0-9]/g, "") === "" ? null : Number(el.value.replace(/[^0-9]/g, ""))) : el.value.trim();
-  save(); updateTeamTotals();   // no full redraw, so Tab moves to the next box normally
+async function saveOrder(team, keys) {
+  keys.forEach((k, i) => { teamEdits[k] = { ...(teamEdits[k] || { key: k }), sort: i + 1 }; });   // show it right away
+  renderLeaderboard();
+  try { await post("/api/team", { action: "order", keys }); }
+  catch (err) { alert(err.message); await loadTeamEdits(); renderLeaderboard(); }
+}
+function moveKey(team, key, toIndex) {
+  const keys = (lastTeamOrder[team] || []).filter(k => k !== key);
+  toIndex = Math.max(0, Math.min(keys.length, toIndex));
+  keys.splice(toIndex, 0, key);
+  saveOrder(team, keys);
+}
+const teamOf = el => el.closest("[data-team]")?.dataset.team;
+let dragKey = null;
+$("lb-grid").addEventListener("dragstart", e => {
+  const row = e.target.closest("[data-drag-key][draggable]"); if (!row || !isAdmin()) return;
+  dragKey = row.dataset.dragKey; row.classList.add("dragging");
+  e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", dragKey);
 });
-function updateTeamTotals() {
-  TEAMS.forEach((t, ti) => {
-    const list = saved.team[t.key];
-    const card = $("team-grid").children[ti]; if (!card) return;
-    const done = list.reduce((a, m) => a + (Number(m.done) || 0), 0);
-    const goal = list.reduce((a, m) => a + (Number(m.target) || 0), 0);
-    card.querySelector(".team-sum").innerHTML = `<strong>${fmt(done)}</strong><span>${goal ? `of ${fmt(goal)} today · ${Math.round(done / goal * 100)}%` : "done today"}</span>`;
-    card.querySelectorAll(".mini span").forEach((bar, i) => {
-      const m = list[i]; bar.style.width = (m && m.target ? Math.min(100, (m.done || 0) / m.target * 100) : 0) + "%";
-    });
+$("lb-grid").addEventListener("dragend", e => { dragKey = null; document.querySelectorAll(".dragging,.drop-before,.drop-after").forEach(x => x.classList.remove("dragging", "drop-before", "drop-after")); });
+$("lb-grid").addEventListener("dragover", e => {
+  if (!dragKey) return;
+  const row = e.target.closest("[data-drag-key]"); if (!row || row.dataset.dragKey === dragKey) return;
+  if (teamOf(row) !== teamOf(document.querySelector(`[data-drag-key="${CSS.escape(dragKey)}"]`))) return;
+  e.preventDefault();
+  const r = row.getBoundingClientRect(), after = e.clientY > r.top + r.height / 2;
+  document.querySelectorAll(".drop-before,.drop-after").forEach(x => x.classList.remove("drop-before", "drop-after"));
+  row.classList.add(after ? "drop-after" : "drop-before");
+});
+$("lb-grid").addEventListener("drop", e => {
+  if (!dragKey) return;
+  const row = e.target.closest("[data-drag-key]"); if (!row) return;
+  e.preventDefault();
+  const team = teamOf(row), keys = lastTeamOrder[team] || [];
+  const r = row.getBoundingClientRect(), after = e.clientY > r.top + r.height / 2;
+  const without = keys.filter(k => k !== dragKey);
+  let idx = without.indexOf(row.dataset.dragKey) + (after ? 1 : 0);
+  moveKey(team, dragKey, idx);
+  dragKey = null;
+});
+$("lb-grid").addEventListener("change", e => {
+  const inp = e.target.closest("[data-ord-key]"); if (!inp) return;
+  const n = parseInt(inp.value, 10); if (!n) return renderLeaderboard();
+  moveKey(teamOf(inp), inp.dataset.ordKey, n - 1);
+});
+$("lb-grid").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches(".ord-num")) e.target.blur(); });
+$("lb-grid").addEventListener("focusin", e => { if (e.target.matches(".ord-num")) e.target.select(); });
+
+function plGroupKey(p) {
+  return plGroup === "dept" ? (p.dept || "Other") : plGroup === "tier" ? (p.tier || "No tier") : plGroup === "reports" ? (p.reports || "No manager") : "";
+}
+function plBody(rows, admin, fullIdx) {
+  if (plGroup === "none") return rows.map(p => plRow(p, admin, fullIdx[p.key])).join("");
+  const groups = new Map();
+  rows.forEach(p => { const g = plGroupKey(p); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(p); });
+  let keys = [...groups.keys()];
+  if (plGroup === "dept") keys.sort((a, b) => (PL_DEPTS.indexOf(a) + 1 || 99) - (PL_DEPTS.indexOf(b) + 1 || 99));
+  if (plGroup === "tier") keys.sort((a, b) => (["Elite", "Pro", "Prime"].indexOf(a) + 1 || 9) - (["Elite", "Pro", "Prime"].indexOf(b) + 1 || 9));
+  // "reports": managers in list order (Karl first), so the chain reads top-down
+  const cols = admin ? 6 : 5;
+  return keys.map(g => {
+    const list = groups.get(g), id = `${plGroup}:${g}`, shut = plCollapsed.has(id);
+    const label = plGroup === "dept" ? `<span class="dept d-${slug(g)}">${esc(g)}</span>`
+      : plGroup === "tier" ? `<span class="tier t-${slug(g)}">${esc(g)}</span>`
+      : `<span class="grp-name">${esc(g)}</span>${lastPeople["pl:" + slug(g)]?.role ? ` <span class="grp-sub">${esc(lastPeople["pl:" + slug(g)].role)}</span>` : ""}`;
+    groupMembers[id] = list.map(p => p.key);
+    const optPills = canEditTeam() ? `<span class="grp-opts">${OPTS.map(([n, l]) => {
+      const ready = list.filter(p => (p.presets?.opts?.[n] || []).length).length;
+      const allOn = ready && list.filter(p => (p.presets?.opts?.[n] || []).length).every(p => p.presets?.active === n);
+      return `<button type="button" class="opt opt-${n} grp-opt${allOn ? " active" : ""}${ready ? "" : " opt-empty"}" data-grp-opt="${n}" data-grp-id="${esc(id)}"
+        title="Switch everyone in this group to their ${l} (${ready} of ${list.length} have it set up)">${l}<b>${ready}</b></button>`;
+    }).join("")}</span>` : "";
+    return `<tr class="grp-row"><td colspan="${cols}"><div class="grp-line"><button type="button" class="grp-toggle" data-pl-fold-one="${esc(id)}" aria-expanded="${!shut}">
+        <span class="grp-caret">${shut ? "▸" : "▾"}</span>${label}<span class="grp-count">${list.length}</span></button>${optPills}</div></td></tr>` +
+      (shut ? "" : list.map(p => plRow(p, admin, fullIdx[p.key])).join(""));
+  }).join("");
+}
+/* ---- Group-wide 1st / 2nd / 3rd Option ----
+   Each person switches to THEIR OWN saved option (set up in their window). People without that option are skipped.
+   Afterwards: one button pushes everyone's changes to Arena admin. */
+const groupMembers = {};
+let bulkState = null;   // { html, done: [keys] }
+const setBulk = html => { bulkState = html ? { ...(bulkState || {}), html } : null; const b = $("bulk-bar"); if (b) { b.hidden = !html; b.innerHTML = html || ""; } };
+async function applyGroupOption(id, n) {
+  const label = OPTS.find(o => o[0] === n)[1], gname = id.split(":").slice(1).join(":");
+  const keys = groupMembers[id] || [], people = keys.map(k => lastPeople[k]).filter(Boolean);
+  const ready = people.filter(p => (p.presets?.opts?.[n] || []).length), skip = people.filter(p => !(p.presets?.opts?.[n] || []).length);
+  if (!ready.length) { setBulk(`<span><b>${esc(gname)}</b>: nobody has a <b>${label}</b> set up yet — open a person, press ✎ next to ${label} to set it up.</span><span class="spacer"></span><button class="row-btn" data-bulk-close="1">OK</button>`); return; }
+  if (!confirm(`Switch ${ready.length} ${gname} people to their ${label}?${skip.length ? `\n\n${skip.length} without a ${label} will be skipped.` : ""}`)) return;
+  if (!me) { setBulk(`<span class="um-red">Sign in on the live site to save.</span><span class="spacer"></span><button class="row-btn" data-bulk-close="1">OK</button>`); return; }
+  setBulk(`<span>Switching ${ready.length} people to <b>${label}</b>…</span>`);
+  const failed = [];
+  let i = 0;
+  await Promise.all(Array.from({ length: Math.min(4, ready.length) }, async () => {
+    while (i < ready.length) {
+      const p = ready[i++], list = p.presets.opts[n];
+      const skills = Object.fromEntries(SKILLS.map(k => [k, list.includes(k)]));
+      const presets = { ...p.presets, active: n };
+      try {
+        await post("/api/team", { action: "skills", key: p.key, skills });
+        await post("/api/team", { action: "presets", key: p.key, presets });
+      } catch (e) { failed.push(p.name); }
+    }
+  }));
+  await loadTeamEdits();
+  const done = ready.filter(p => !failed.includes(p.name)).map(p => p.key);
+  bulkState = { done, n };
+  renderLeaderboard();
+  const pushable = done.filter(k => lastPeople[k]?.adminUserId).length;
+  setBulk(`<span><b>${esc(gname)}</b> → <b class="opt-name opt-${n}">${label}</b>: <b>${done.length}</b> switched${skip.length ? ` · ${skip.length} skipped — no ${label} set up${skip.length <= 6 ? `: ${esc(skip.map(p => p.name.split(" ")[0]).join(", "))}` : ""}` : ""}${failed.length ? ` · <span class="um-red">${failed.length} failed</span>` : ""}.</span>
+    <span class="spacer"></span>${isAdmin() && pushable ? `<button class="pm-push-btn" data-bulk-push="1">⇪ Push ${pushable} to admin</button>` : ""}<button class="row-btn" data-bulk-close="1">Done</button>`);
+}
+async function pushGroup() {
+  const keys = (bulkState?.done || []).filter(k => lastPeople[k]?.adminUserId);
+  const st = await adminApiStatus();
+  if (!confirm(`${st?.dryRun ? "DRY RUN — nothing will be written.\n\n" : ""}Push skill changes for ${keys.length} people to Arena admin?`)) return;
+  let ok = 0, bad = 0, calls = 0, i = 0;
+  setBulk(`<span>Pushing to admin… 0 / ${keys.length}</span>`);
+  for (const k of keys) {
+    i++;
+    const p = lastPeople[k], pushed = p.pushed || {};
+    const changes = SKILLS.filter(s => typeof p.skills?.[s] === "boolean" && pushed[s] !== p.skills[s]).map(s => ({ skill: s, enabled: p.skills[s] }));
+    if (changes.length) {
+      try { const r = await post("/api/admin-skills", { key: k, userId: p.adminUserId, changes, confirm: true }); calls += r.results.length; r.ok ? ok++ : bad++; }
+      catch { bad++; }
+    } else ok++;
+    setBulk(`<span>Pushing to admin… ${i} / ${keys.length}</span>`);
+  }
+  await loadTeamEdits(); renderLeaderboard();
+  setBulk(`<span class="push-mode ${st?.dryRun ? "dry" : "live"}">${st?.dryRun ? "DRY RUN" : "LIVE"}</span><span><b>${ok}</b> people ${st?.dryRun ? "checked" : "up to date in admin"}${bad ? ` · <span class="um-red">${bad} with errors — open them and press ⇪ Push to see which skills</span>` : ""} · ${calls} skill calls.</span>
+    <span class="spacer"></span><button class="row-btn" data-bulk-close="1">Done</button>`);
+}
+const rosterIdx = Object.fromEntries(PL_ROSTER.map((r, i) => ["pl:" + slug(r[0]), i]));
+function renderPLCard(list, admin, def) {
+  list = list.slice().sort((a, b) => (a.sort ?? 1e6) - (b.sort ?? 1e6) || (rosterIdx[a.key] ?? 9999) - (rosterIdx[b.key] ?? 9999) || a.name.localeCompare(b.name));
+  const counts = {}; list.forEach(p => { const d = p.dept || "Other"; counts[d] = (counts[d] || 0) + 1; });
+  const depts = PL_DEPTS.filter(d => counts[d]).concat(Object.keys(counts).filter(d => !PL_DEPTS.includes(d)));
+  if (plDept !== "all" && !counts[plDept]) plDept = "all";
+  lastTeamOrder.pl = list.map(p => p.key);
+  const fullIdx = Object.fromEntries(list.map((p, i) => [p.key, i]));
+  const rows = list.filter(p => plDept === "all" || (p.dept || "Other") === plDept);
+  const leads = [...new Set(list.map(p => p.reports).filter(Boolean))];
+  const add = admin && editingTeam ? `<form class="lb-add pl" data-add-team="pl">
+      <input name="name" placeholder="Name" required aria-label="Name"><input name="role" placeholder="Title" aria-label="Title">
+      <select name="dept" aria-label="Dept">${PL_DEPTS.map(d => `<option>${d}</option>`).join("")}</select>
+      <select name="tier" aria-label="Tier">${PL_TIERS.map(t => `<option>${t}</option>`).join("")}</select>
+      <input name="reports_to" placeholder="Reports to" list="pl-leads" aria-label="Reports to"><button class="row-btn" type="submit">+ Add</button></form>` : "";
+  if (cardShut.has("pl")) return `<article class="lb-card pl shut" style="--c:var(${def.c})">
+    <header><h3>${def.label}</h3><span class="sum">${list.length} people</span>${logoBtn("pl", def, list.length)}</header></article>`;
+  return `<article class="lb-card pl" style="--c:var(${def.c})">
+    <header><h3>${def.label}</h3><span class="sum">${list.length} people</span>${logoBtn("pl", def, list.length)}</header>
+    <div class="pl-tools"><span class="pl-tools-l">Group by</span><div class="pills" id="pl-group">${Object.entries(GROUP_BY).map(([k, l]) =>
+      `<button data-pl-group="${k}" aria-pressed="${plGroup === k}">${l}</button>`).join("")}</div>
+      ${plGroup !== "none" ? `<button class="sk-mini" data-pl-fold="all">collapse all</button><button class="sk-mini" data-pl-fold="none">expand all</button>` : ""}</div>
+    <div class="pills pl-depts"><button data-pl-dept="all" aria-pressed="${plDept === "all"}">All ${list.length}</button>${depts.map(d =>
+      `<button data-pl-dept="${esc(d)}" aria-pressed="${plDept === d}"><span class="dept d-${slug(d)}">${esc(d)}</span> ${counts[d]}</button>`).join("")}</div>
+    <datalist id="pl-leads">${leads.map(n => `<option value="${esc(n)}">`).join("")}</datalist>
+    <div class="bulk-bar" id="bulk-bar"${bulkState ? "" : " hidden"}>${bulkState ? bulkState.html : ""}</div>
+    <div class="table-wrap"><table class="pl-table">
+      <thead><tr>${admin ? "<th>#</th>" : ""}<th>Name</th><th>Dept</th><th>Title</th><th>Tier</th><th>Reports to</th></tr></thead>
+      <tbody data-team="pl" data-filtered="${plDept !== "all"}">${plBody(rows, admin, fullIdx) || `<tr><td colspan="6">No one here.</td></tr>`}</tbody>
+    </table></div>
+    ${add}
+  </article>`;
+}
+setInterval(() => { if (currentView === "team" && !editingTeam && !editingKey) renderLeaderboard(); }, 60000);
+$("lb-metrics").addEventListener("click", e => { const b = e.target.closest("[data-lbm]"); if (b) { lbMetric = b.dataset.lbm; renderLeaderboard(); } });
+$("lb-search").addEventListener("input", e => { lbQuery = e.target.value; renderLeaderboard(); });
+$("lb-edit").addEventListener("click", () => { editingTeam = !editingTeam; renderLeaderboard(); });
+$("view-team").addEventListener("click", async e => {
+  const go = e.target.closest("[data-grp-opt]");
+  if (go) { e.stopPropagation(); return applyGroupOption(go.dataset.grpId, go.dataset.grpOpt); }
+  if (e.target.closest("[data-bulk-push]")) return pushGroup();
+  if (e.target.closest("[data-bulk-close]")) { bulkState = null; return setBulk(null); }
+  const cf = e.target.closest("[data-card-fold]");
+  if (cf) {
+    const t = cf.dataset.cardFold;
+    if (cardShut.has(t)) cardShut.delete(t);
+    else {
+      cardShut.add(t);
+      // closing a team also closes every group inside it, so it reopens as a tidy list of group headers
+      if (t === "pl") {
+        const { people } = teamPeople();
+        Object.keys(GROUP_BY).filter(g => g !== "none").forEach(g => {
+          const prev = plGroup; plGroup = g;
+          people.filter(p => p.team === "pl").forEach(p => plCollapsed.add(`${g}:${plGroupKey(p)}`));
+          plGroup = prev;
+        });
+        saved.plCollapsed = [...plCollapsed];
+      }
+    }
+    saved.teamShut = [...cardShut]; save(); return renderLeaderboard();
+  }
+  const gb = e.target.closest("[data-pl-group]");
+  if (gb) { plGroup = gb.dataset.plGroup; saved.plGroup = plGroup; save(); return renderLeaderboard(); }
+  const f1 = e.target.closest("[data-pl-fold-one]");
+  if (f1) { const id = f1.dataset.plFoldOne; plCollapsed.has(id) ? plCollapsed.delete(id) : plCollapsed.add(id); saved.plCollapsed = [...plCollapsed]; save(); return renderLeaderboard(); }
+  const fa = e.target.closest("[data-pl-fold]");
+  if (fa) {
+    const ids = [...document.querySelectorAll("[data-pl-fold-one]")].map(b => b.dataset.plFoldOne);
+    if (fa.dataset.plFold === "all") ids.forEach(i => plCollapsed.add(i)); else [...plCollapsed].filter(i => i.startsWith(plGroup + ":")).forEach(i => plCollapsed.delete(i));
+    saved.plCollapsed = [...plCollapsed]; save(); return renderLeaderboard();
+  }
+  const dp = e.target.closest("[data-pl-dept]");
+  if (dp) { plDept = dp.dataset.plDept; return renderLeaderboard(); }
+  const pe = e.target.closest("[data-person-edit]");
+  if (pe && !canEditTeam()) return openPerson(pe.dataset.personEdit);
+  if (pe) return openPerson(pe.dataset.personEdit, true);
+  const pb = e.target.closest("[data-person]");
+  if (pb) return openPerson(pb.dataset.person);
+  const b = e.target.closest("button"); if (!b || !isAdmin()) return;
+  if (b.dataset.open) {
+    editingKey = editingKey === b.dataset.open ? null : b.dataset.open;
+    renderLeaderboard();
+    document.querySelector(`.lb-edit-row[data-key="${CSS.escape(editingKey || "")}"] [data-f="role"]`)?.focus();
+    return;
+  }
+  if (b.dataset.close) { editingKey = null; return renderLeaderboard(); }
+  try {
+    if (b.dataset.save) {
+      const row = b.closest(".lb-edit-row"), f = n => row.querySelector(`[data-f="${n}"]`);
+      await post("/api/team", { action: "save", key: b.dataset.save, name: f("name").value, role: f("role").value, team: f("team").value, hidden: f("hidden").checked,
+        dept: f("dept")?.value, tier: f("tier")?.value, reports_to: f("reports_to")?.value });
+      b.textContent = "Saved ✓";
+      editingKey = null;
+    } else if (b.dataset.reset) await post("/api/team", { action: "reset", key: b.dataset.reset });
+    else if (b.dataset.del) { if (!confirm("Delete this person from the Team tab?")) return; await post("/api/team", { action: "delete", key: b.dataset.del }); }
+    else return;
+    await loadTeamEdits(); renderLeaderboard();
+  } catch (err) { alert(err.message); }
+});
+$("view-team").addEventListener("submit", async e => {
+  const form = e.target.closest("[data-add-team]"); if (!form) return;
+  e.preventDefault();
+  const d = Object.fromEntries(new FormData(form));
+  try { await post("/api/team", { action: "add", team: form.dataset.addTeam, ...d }); await loadTeamEdits(); renderLeaderboard(); }
+  catch (err) { alert(err.message); }
+});
+
+/* ---------- Person modal: details + skills (admins edit, members view) ---------- */
+let pmKey = null, pmSkills = {}, pmEditing = false;
+// opens read-only; admins press Edit (or the ✎ on a row) to change things
+function openPerson(key, edit = false) {
+  const p = lastPeople[key]; if (!p) return;
+  pmKey = key; pmSkills = { ...(p.skills || {}) }; pmEditing = edit && canEditTeam();
+  pmPresets = p.presets ? JSON.parse(JSON.stringify(p.presets)) : { opts: { 1: [], 2: [], 3: [] }, active: null };
+  pmSetup = null; pmSetupSel = new Set();
+  const admin = pmEditing, pl = p.team === "pl" || !!p.dept;
+  $("pm-name").textContent = p.name;
+  $("pm-sub").innerHTML = [
+    p.role && `<span class="chip">${esc(p.role)}</span>`,
+    `<span class="chip">${p.team === "director" ? "Director · Oregon + PL" : esc(TEAM_DEFS[p.team]?.label || "")}</span>`,
+    p.dept && `<span class="dept d-${slug(p.dept)}">${esc(p.dept)}</span>`,
+    p.tier && `<span class="tier t-${slug(p.tier)}">${esc(p.tier)}</span>`,
+    p.reports && `<span class="chip">reports to <b class="um-green">${esc(p.reports)}</b></span>`,
+  ].filter(Boolean).join("");
+  $("pm-logos").innerHTML = (TEAM_DEFS[p.team]?.logos || []).map(l => `<img src="${TEAM_LOGOS[l].src}" alt="">`).join("");
+  const mins = minsAgo(p.seen), taskKey = Object.keys(p.nums || {}).find(k => /task/i.test(k));
+  const facts = [p.email && `<span>${esc(p.email)}</span>`, p.seen && `<span class="${mins < 5 ? "um-green" : ""}">${esc(ago(p.seen))}</span>`,
+    taskKey && `<span><b>${fmt(p.nums[taskKey])}</b> ${esc(prettyCol(taskKey).toLowerCase())}</span>`].filter(Boolean).join("");
+  $("pm-fields").innerHTML = (facts ? `<div class="pm-facts">${facts}</div>` : "") + (admin ? `<div class="pm-grid">
+      <label>Name<input id="pm-f-name" value="${esc(p.name)}"></label>
+      <label>Role / title<input id="pm-f-role" value="${esc(p.role || "")}"></label>
+      <label>Team<select id="pm-f-team">${TEAM_ORDER.map(t => `<option value="${t}"${p.team === t ? " selected" : ""}>${t === "director" ? "Director (both)" : TEAM_DEFS[t].label}</option>`).join("")}</select></label>
+      ${pl ? `<label>Dept<select id="pm-f-dept">${["", ...PL_DEPTS].map(d => `<option value="${d}"${(p.dept || "") === d ? " selected" : ""}>${d || "—"}</option>`).join("")}</select></label>
+      <label>Tier<select id="pm-f-tier">${["", ...PL_TIERS].map(t => `<option value="${t}"${(p.tier || "") === t ? " selected" : ""}>${t || "—"}</option>`).join("")}</select></label>
+      <label>Reports to<input id="pm-f-rep" value="${esc(p.reports || "")}" list="pl-leads"></label>` : ""}
+      <label>Admin user ID${p.mbUserId || (!p.roster && !p.manual) ? ` <span class="uid-src">from 46168</span>` : ""}<input id="pm-f-uid" value="${esc(p.adminUserId || "")}" placeholder="not in 46168 — paste it here" spellcheck="false"></label>
+      <label class="pm-hide"><input type="checkbox" id="pm-f-hidden"${p.hidden ? " checked" : ""}> Hide from the team list</label>
+    </div>` : "");
+  renderPmSkills();
+  $("pm-foot").innerHTML = pmEditing
+    ? `${p.manual ? `<button type="button" class="row-btn danger" id="pm-del">Delete person</button>` : p.edited ? `<button type="button" class="row-btn" id="pm-reset">Undo edits</button>` : ""}
+       <span class="spacer"></span><span class="um-msg" id="pm-msg"></span><button type="button" class="row-btn" id="pm-stop">Cancel</button><button type="button" class="primary" id="pm-save">Save</button>`
+    : `<span class="spacer"></span>${isAdmin() ? `<button type="button" class="pm-push-btn" id="pm-push-btn" title="Write this person’s skills to Arena admin">⇪ Push to admin</button>` : ""}${canEditTeam() ? `<button type="button" class="pm-edit-btn" id="pm-edit">✎ Edit</button>` : ""}<button type="button" class="row-btn" id="pm-cancel">Close</button>`;
+  $("pm-push").hidden = true; $("pm-push").innerHTML = "";
+  $("person-modal").classList.toggle("editing", pmEditing);
+  if (!$("person-modal").open) $("person-modal").showModal();
+  fitPm();
+}
+// keep the whole window on screen: shrink its contents until nothing scrolls
+function fitPm() {
+  const dlg = $("person-modal"), inner = $("pm-form");
+  if (!dlg.open) return;
+  const room = innerHeight * 0.96 - 14;   // dialog borders + a little air
+  const fits = z => { inner.style.zoom = z; return inner.getBoundingClientRect().height <= room; };
+  if (fits(1)) return;
+  // largest zoom that fits (pills re-wrap as it shrinks, so search instead of dividing)
+  let lo = 0.5, hi = 1;
+  for (let i = 0; i < 9; i++) { const mid = (lo + hi) / 2; if (fits(mid)) lo = mid; else hi = mid; }
+  inner.style.zoom = lo;
+}
+addEventListener("resize", () => fitPm());
+/* ---- Push to Arena admin ----
+   Shows what will change in admin (compared with the last push), asks to confirm, then writes
+   one call per skill through /api/admin-skills. SKILLS_DRY_RUN=true (default) only shows the requests. */
+let adminApi = null;
+async function adminApiStatus() {
+  if (adminApi || !isAdmin()) return adminApi;
+  try { adminApi = await api("/api/admin-skills"); } catch { adminApi = { dryRun: true, missing: ["(couldn’t reach /api/admin-skills)"] }; }
+  return adminApi;
+}
+function pushDiff(p) {
+  const pushed = p.pushed || {};
+  return SKILLS.filter(k => typeof pmSkills[k] === "boolean" && pushed[k] !== pmSkills[k]).map(k => ({ skill: k, enabled: pmSkills[k] }));
+}
+async function showPush() {
+  const p = lastPeople[pmKey], box = $("pm-push");
+  const st = await adminApiStatus();
+  const diff = pushDiff(p);
+  box.hidden = false;
+  const mode = st?.dryRun ? `<span class="push-mode dry">DRY RUN — nothing is written yet</span>` : `<span class="push-mode live">LIVE — writes to admin</span>`;
+  if (!p.adminUserId) {
+    box.innerHTML = `${mode}<p><b>${esc(p.name)}</b> isn’t in Metabase 46168, so there’s no admin user ID to write to. Check their name in 46168, or press <b>✎ Edit</b> and paste their <b>Admin user ID</b>.</p>
+      <div class="push-acts"><button type="button" class="row-btn" data-push-close="1">OK</button></div>`;
+  } else if (!diff.length) {
+    box.innerHTML = `${mode}<p>Admin already matches — nothing to push.</p><div class="push-acts"><button type="button" class="row-btn" data-push-close="1">OK</button></div>`;
+  } else {
+    box.innerHTML = `${mode}<p>Push <b>${diff.length}</b> change${diff.length === 1 ? "" : "s"} to admin for <b>${esc(p.name)}</b> <span class="push-uid">${esc(p.adminUserId)}</span>:</p>
+      <div class="push-list">${diff.map(c => `<span class="push-chip ${c.enabled ? "on" : "off"}">${c.enabled ? "+" : "−"} ${esc(c.skill)}</span>`).join("")}</div>
+      ${st?.missing?.length && !st.dryRun ? `<p class="um-red">Admin API settings missing: ${esc(st.missing.join(", "))}</p>` : ""}
+      <div class="push-acts"><span class="spacer"></span><button type="button" class="row-btn" data-push-close="1">Cancel</button>
+        <button type="button" class="primary" data-push-go="1">${st?.dryRun ? "Run dry run" : `Write ${diff.length} to admin`}</button></div>`;
+  }
+  fitPm();
+}
+async function doPush() {
+  const p = lastPeople[pmKey], box = $("pm-push"), diff = pushDiff(p);
+  box.querySelector("[data-push-go]").disabled = true; box.querySelector("[data-push-go]").textContent = "Working…";
+  try {
+    const r = await post("/api/admin-skills", { key: pmKey, userId: p.adminUserId, changes: diff, confirm: true });
+    if (!r.dryRun) { await loadTeamEdits(); renderLeaderboard(); }
+    const okN = r.results.filter(x => x.ok).length;
+    box.innerHTML = `<span class="push-mode ${r.dryRun ? "dry" : "live"}">${r.dryRun ? "DRY RUN" : "LIVE"}</span>
+      <p>${r.dryRun ? `These <b>${r.results.length}</b> requests would be sent:` : `<b>${okN}</b> of <b>${r.results.length}</b> written to admin.`}</p>
+      <div class="push-results">${r.results.map(x => `<div class="${x.ok ? "ok" : "bad"}"><b>${x.ok ? "✓" : "✗"}</b> ${x.enabled ? "+" : "−"} ${esc(x.skill)}
+        <code>${esc(r.dryRun ? `${x.request.method} ${x.request.url}${x.request.body ? " " + x.request.body : ""}` : `${x.status} ${x.detail || ""}`)}</code></div>`).join("")}</div>
+      <div class="push-acts"><span class="spacer"></span><button type="button" class="row-btn" data-push-close="1">Close</button></div>`;
+  } catch (err) {
+    box.insertAdjacentHTML("beforeend", `<p class="um-red">${esc(err.message)}</p>`);
+  }
+  fitPm();
+}
+
+/* ---- 1st / 2nd / 3rd Option: saved skill sets per person ----
+   Click an option pill → those skills turn on (everything else off) and it's saved.
+   ✎ next to it → set up that option: click skills to include them, then Save option. */
+const OPTS = [["1", "1st Option"], ["2", "2nd Option"], ["3", "3rd Option"]];
+let pmPresets = { opts: { 1: [], 2: [], 3: [] }, active: null }, pmSetup = null, pmSetupSel = new Set();
+/* ---- Copy / paste skills between people (on, off and not-set all come along) ---- */
+let copiedSkills = (() => { try { return JSON.parse(localStorage.getItem("pmd-copied-skills") || "null"); } catch { return null; } })();
+function renderPmCopy() {
+  const box = $("pm-copy"); if (!box) return;
+  if (!canEditTeam() || pmSetup) { box.innerHTML = ""; return; }
+  const p = lastPeople[pmKey] || {};
+  const canPaste = copiedSkills && copiedSkills.key !== pmKey;
+  box.innerHTML = `<button type="button" class="cp-btn" data-copy-skills="1" title="Copy ${esc(p.name || "")}’s on / off / not-set skills">⧉ Copy skills</button>
+    ${canPaste ? `<button type="button" class="cp-btn paste" data-paste-skills="1" title="Give ${esc(p.name || "")} exactly ${esc(copiedSkills.name)}’s skills">⇩ Paste from ${esc(copiedSkills.name.split(" ")[0])}
+      <b>${copiedSkills.on}</b><i>${copiedSkills.off}</i></button>` : ""}`;
+}
+async function copySkills() {
+  const p = lastPeople[pmKey];
+  const on = SKILLS.filter(k => pmSkills[k] === true), off = SKILLS.filter(k => pmSkills[k] === false);
+  copiedSkills = { key: pmKey, name: p.name, skills: { ...pmSkills }, on: on.length, off: off.length };
+  try { localStorage.setItem("pmd-copied-skills", JSON.stringify(copiedSkills)); } catch {}
+  // also put a readable list on the clipboard, handy for Slack
+  const txt = `${p.name} — skills\nOn (${on.length}): ${on.join(", ") || "—"}\nOff (${off.length}): ${off.join(", ") || "—"}`;
+  try { await navigator.clipboard.writeText(txt); } catch {}
+  renderPmCopy();
+  flashPm(`Copied ${p.name}’s skills — open someone else and press Paste`, true);
+}
+function pasteSkills() {
+  if (!copiedSkills) return;
+  pmSkills = { ...copiedSkills.skills };
+  if (pmPresets.active) { pmPresets.active = null; savePresets().catch(() => {}); }
+  renderPmSkills();
+  if (!pmEditing) saveSkillsNow();
+  flashPm(`Pasted ${copiedSkills.name}’s skills${pmEditing ? " — press Save to keep them" : ""}`, true);
+}
+function renderPmOpts() {
+  renderPmCopy();
+  const can = canEditTeam();
+  $("pm-opts").innerHTML = OPTS.map(([n, label]) => {
+    const list = pmPresets.opts[n] || [], active = pmPresets.active === n, setting = pmSetup === n;
+    return `<span class="opt-wrap">
+      <button type="button" class="opt opt-${n}${active ? " active" : ""}${setting ? " setting" : ""}${list.length ? "" : " opt-empty"}" data-opt="${n}" ${can ? "" : "disabled"}
+        title="${list.length ? `${label}: ${list.length} skills — click to switch to it` : `${label} isn’t set up yet${can ? " — click ✎ to set it up" : ""}`}">${label}${list.length ? ` <b>${list.length}</b>` : ""}</button>
+      ${can ? `<button type="button" class="opt-edit" data-opt-edit="${n}" title="Set up ${label}" aria-label="Set up ${label}">✎</button>` : ""}
+    </span>`;
+  }).join("");
+  const bar = $("pm-optbar");
+  if (pmSetup) {
+    const label = OPTS.find(o => o[0] === pmSetup)[1];
+    bar.hidden = false;
+    bar.innerHTML = `<span>Setting up <b class="opt-name opt-${pmSetup}">${label}</b> — click skills to include them (<b>${pmSetupSel.size}</b> picked).</span>
+      <span class="spacer"></span><button type="button" class="row-btn" data-opt-copy="1">Copy current skills</button>
+      <button type="button" class="row-btn" data-opt-clear="1">Clear</button><button type="button" class="row-btn" data-opt-cancel="1">Cancel</button>
+      <button type="button" class="primary" data-opt-save="1">Save option</button>`;
+  } else { bar.hidden = true; bar.innerHTML = ""; }
+}
+async function savePresets() {
+  if (!me) throw new Error("Sign in on the live site to save.");
+  await post("/api/team", { action: "presets", key: pmKey, presets: pmPresets });
+  teamEdits[pmKey] = { ...(teamEdits[pmKey] || { key: pmKey }), presets: JSON.stringify(pmPresets) };
+  if (lastPeople[pmKey]) lastPeople[pmKey].presets = JSON.parse(JSON.stringify(pmPresets));
+}
+let skillSaveTimer;
+function saveSkillsNow() {
+  clearTimeout(skillSaveTimer);
+  skillSaveTimer = setTimeout(async () => {          // quick clicks are batched into one save
+    const key = pmKey, skills = { ...pmSkills };
+    try {
+      if (!me) throw new Error("Sign in on the live site to save.");
+      await post("/api/team", { action: "skills", key, skills });
+      teamEdits[key] = { ...(teamEdits[key] || { key }), skills: JSON.stringify(skills) };
+      if (lastPeople[key]) lastPeople[key].skills = skills;
+      flashPm("Saved", true);
+    } catch (err) { flashPm(err.message, false); }
+  }, 400);
+}
+function flashPm(t, ok) {
+  let m = $("pm-msg");
+  if (!m) { $("pm-foot").insertAdjacentHTML("afterbegin", `<span class="um-msg" id="pm-msg"></span>`); m = $("pm-msg"); }
+  m.className = "um-msg " + (ok ? "um-green" : "um-red"); m.textContent = t;
+  clearTimeout(m._t); m._t = setTimeout(() => { m.textContent = ""; }, 2500);
+}
+function renderPmSkills() {
+  requestAnimationFrame(fitPm);
+  renderPmOpts();
+  const admin = pmEditing;
+  const clickable = canEditTeam();      // skills flip on click for admins, with or without Edit
+  const on = SKILLS.filter(k => pmSkills[k] === true).length, off = SKILLS.filter(k => pmSkills[k] === false).length;
+  $("pm-skill-count").innerHTML = on + off
+    ? `<b class="um-green">${on}</b> on · <b class="um-red">${off}</b> off${SKILLS.length - on - off ? ` · ${SKILLS.length - on - off} not set` : ""}`
+    : `not set yet${admin ? " — click a skill to turn it on" : ""}`;
+  $("pm-skills").innerHTML = SKILL_GROUPS.map(([g, list]) => {
+    const n = pmSetup ? list.filter(k => pmSetupSel.has(k)).length : list.filter(k => pmSkills[k] === true).length;
+    return `<section class="sk-group">
+      <h4>${clickable ? `<button type="button" class="sk-row" data-sk-group="${esc(g)}" title="Click to turn the whole ${esc(g)} row ${n === list.length ? "off" : "on"}">${esc(g)}</button>` : `<span class="sk-row">${esc(g)}</span>`}
+        <span class="sk-n${n === list.length ? " full" : ""}">${n}/${list.length}</span>${clickable ? `<button type="button" class="sk-mini" data-sk-group="${esc(g)}">${n === list.length ? "all off" : "all on"}</button>` : ""}</h4>
+      <div class="sk-grid">${list.map(k => {
+        const st = pmSetup ? (pmSetupSel.has(k) ? "on pick" : "unset") : pmSkills[k] === true ? "on" : pmSkills[k] === false ? "off" : "unset";
+        return `<button type="button" class="sk ${st}" data-skill="${esc(k)}" ${clickable ? "" : "disabled"} aria-pressed="${st === "on"}"
+          title="${esc(k)}: ${st === "on" ? "on" : st === "off" ? "off" : "not set"}${clickable ? " — click to turn " + (st === "on" ? "off" : "on") : ""}">${esc(k.replace(/^Verify /, "Verify: "))}</button>`;
+      }).join("")}</div>
+    </section>`;
+  }).join("") + (clickable ? `<div class="pm-bulk"><button type="button" class="row-btn" data-sk-all="on">All on</button><button type="button" class="row-btn" data-sk-all="off">All off</button><button type="button" class="row-btn" data-sk-all="clear">Clear</button></div>` : "");
+}
+$("person-modal").addEventListener("click", async e => {
+  if (e.target === $("person-modal")) return $("person-modal").close();       // click outside
+  if (e.target.closest("[data-copy-skills]")) return copySkills();
+  if (e.target.closest("[data-paste-skills]")) return pasteSkills();
+  // --- option pills ---
+  const ob = e.target.closest("[data-opt]");
+  if (ob && canEditTeam()) {
+    const n = ob.dataset.opt, list = pmPresets.opts[n] || [];
+    if (!list.length) { pmSetup = n; pmSetupSel = new Set(SKILLS.filter(k => pmSkills[k] === true)); return renderPmSkills(); }
+    pmSkills = Object.fromEntries(SKILLS.map(k => [k, list.includes(k)]));
+    pmPresets.active = n; pmSetup = null;
+    renderPmSkills();
+    try { if (!me) throw new Error("Sign in on the live site to save."); await post("/api/team", { action: "skills", key: pmKey, skills: pmSkills }); await savePresets();
+      if (lastPeople[pmKey]) lastPeople[pmKey].skills = { ...pmSkills };
+      teamEdits[pmKey] = { ...(teamEdits[pmKey] || { key: pmKey }), skills: JSON.stringify(pmSkills), presets: JSON.stringify(pmPresets) };
+      flashPm(`${OPTS.find(o => o[0] === n)[1]} is on`, true); }
+    catch (err) { flashPm(err.message, false); }
+    return;
+  }
+  const oe = e.target.closest("[data-opt-edit]");
+  if (oe) { const n = oe.dataset.optEdit; pmSetup = pmSetup === n ? null : n; pmSetupSel = new Set((pmPresets.opts[n] || []).length ? pmPresets.opts[n] : SKILLS.filter(k => pmSkills[k] === true)); return renderPmSkills(); }
+  if (e.target.closest("[data-opt-cancel]")) { pmSetup = null; return renderPmSkills(); }
+  if (e.target.closest("[data-opt-clear]")) { pmSetupSel = new Set(); return renderPmSkills(); }
+  if (e.target.closest("[data-opt-copy]")) { pmSetupSel = new Set(SKILLS.filter(k => pmSkills[k] === true)); return renderPmSkills(); }
+  if (e.target.closest("[data-opt-save]")) {
+    const n = pmSetup; pmPresets.opts[n] = SKILLS.filter(k => pmSetupSel.has(k)); pmSetup = null;
+    renderPmSkills();
+    try { await savePresets(); flashPm(`${OPTS.find(o => o[0] === n)[1]} saved — click it to switch to it`, true); } catch (err) { flashPm(err.message, false); }
+    return;
+  }
+  if (pmSetup) {                                                   // setting up an option: skills/rows pick, nothing is saved yet
+    const k = e.target.closest("[data-skill]")?.dataset.skill;
+    if (k) { pmSetupSel.has(k) ? pmSetupSel.delete(k) : pmSetupSel.add(k); return renderPmSkills(); }
+    const g = e.target.closest("[data-sk-group]")?.dataset.skGroup;
+    if (g) { const list = SKILL_GROUPS.find(x => x[0] === g)[1]; const all = list.every(x => pmSetupSel.has(x)); list.forEach(x => all ? pmSetupSel.delete(x) : pmSetupSel.add(x)); return renderPmSkills(); }
+    const a = e.target.closest("[data-sk-all]")?.dataset.skAll;
+    if (a) { pmSetupSel = a === "on" ? new Set(SKILLS) : new Set(); return renderPmSkills(); }
+  }
+  const sk = e.target.closest("[data-skill]");
+  if (sk && canEditTeam()) {
+    const k = sk.dataset.skill; pmSkills[k] = pmSkills[k] === true ? false : true;
+    if (pmPresets.active) { pmPresets.active = null; savePresets().catch(() => {}); }
+    renderPmSkills();
+    if (!pmEditing) saveSkillsNow();          // view mode: each click is saved straight away
+    return;
+  }
+  const grp = e.target.closest("[data-sk-group]");
+  if (grp && canEditTeam()) {
+    const list = SKILL_GROUPS.find(x => x[0] === grp.dataset.skGroup)[1];
+    const allOn = list.every(k => pmSkills[k] === true);
+    list.forEach(k => pmSkills[k] = !allOn);
+    renderPmSkills();
+    if (!pmEditing) saveSkillsNow();
+    return;
+  }
+  const all = e.target.closest("[data-sk-all]");
+  if (all) { const v = all.dataset.skAll; pmSkills = v === "clear" ? {} : Object.fromEntries(SKILLS.map(k => [k, v === "on"])); renderPmSkills(); if (!pmEditing) saveSkillsNow(); return; }
+  const id = e.target.id;
+  if (id === "pm-close" || id === "pm-cancel") return $("person-modal").close();
+  if (id === "pm-edit") return openPerson(pmKey, true);
+  if (id === "pm-push-btn") return showPush();
+  if (e.target.closest("[data-push-close]")) { $("pm-push").hidden = true; return fitPm(); }
+  if (e.target.closest("[data-push-go]")) return doPush();
+  if (id === "pm-stop") return $("person-modal").close();         // Cancel = drop unsaved changes and close
+  try {
+    if (id === "pm-save") {
+      if (!me) throw new Error("Sign in on the live site to save changes.");
+      const p = lastPeople[pmKey], v = x => $(x) ? $(x).value : undefined;
+      await post("/api/team", { action: "save", key: pmKey, name: v("pm-f-name"), role: v("pm-f-role"), team: v("pm-f-team"),
+        dept: v("pm-f-dept"), tier: v("pm-f-tier"), reports_to: v("pm-f-rep"), hidden: $("pm-f-hidden").checked, admin_user_id: v("pm-f-uid") });
+      await post("/api/team", { action: "skills", key: pmKey, skills: pmSkills });
+      await loadTeamEdits(); renderLeaderboard();
+      return openPerson(pmKey, false);                               // stay open, back to view mode
+    } else if (id === "pm-reset") { await post("/api/team", { action: "reset", key: pmKey }); $("person-modal").close(); }
+    else if (id === "pm-del") { if (!confirm("Delete this person from the Team tab?")) return; await post("/api/team", { action: "delete", key: pmKey }); $("person-modal").close(); }
+    else return;
+    await loadTeamEdits(); renderLeaderboard();
+  } catch (err) { const m = $("pm-msg"); if (m) { m.className = "um-msg um-red"; m.textContent = err.message; } }
+});
+
+/* ---------- Sign-in, set-up and invite links ---------- */
+let me = null, booted = false;
+// Permissions: Admin = everything. Member = whatever the admin ticked. No sign-in (file preview) = everything.
+const PERM_LABELS = { metrics: "Metrics", queue: "Queue", team: "Team", targets: "Edit targets & dates", refresh: "Refresh Metabase" };
+const isAdmin = () => !!(me && me.role === "admin");
+const canEditTeam = () => isAdmin() || !me;   // !me = file/demo preview (saving needs sign-in)
+const can = p => !me || isAdmin() || (me.perms || []).includes(p);
+function applyPerms() {
+  [["metrics", "metrics"], ["queue", "queue"], ["team", "team"]].forEach(([v, p]) => {
+    const b = document.querySelector(`#views [data-view="${v}"]`); if (b) b.hidden = !can(p);
   });
+  $("users-tab").hidden = !(isAdmin() || !me);
+  const edit = can("targets");
+  document.querySelectorAll(".target, #start, #end").forEach(el => { el.readOnly = !edit; if (el.type === "date") el.disabled = !edit; el.title = edit ? "" : "Ask an admin for “Edit targets & dates”"; });
+  document.body.classList.toggle("no-edit", !edit);
 }
-$("team-grid").addEventListener("click", e => {
-  const add = e.target.closest("[data-add]"), rm = e.target.closest("[data-rm]");
-  if (add) { saved.team[add.dataset.add].push({ name: "", role: "", done: null, target: null }); save(); renderTeam();
-    const inputs = $("team-grid").querySelectorAll(`[data-team="${add.dataset.add}"][data-f="name"]`); inputs[inputs.length - 1]?.focus(); }
-  if (rm) { saved.team[rm.dataset.team].splice(+rm.dataset.rm, 1); save(); renderTeam(); }
+const firstAllowedView = () => ["metrics", "queue", "team"].find(can) || (isAdmin() ? "users" : "none");
+const api = async (url, opts = {}) => {
+  const r = await fetch(url, { cache: "no-store", headers: { "Content-Type": "application/json" }, ...opts });
+  const b = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(b.error || `Request failed (${r.status})`), { status: r.status });
+  return b;
+};
+const post = (url, data) => api(url, { method: "POST", body: JSON.stringify(data) });
+
+async function boot() {
+  $("gate-logo").src = TEAM_LOGOS.pl.src;
+  if (forcedDemo) return startApp(null);
+  const invite = new URLSearchParams(location.search).get("invite");
+  if (invite) return showGate("invite", invite);
+  let s;
+  try { s = await api("/api/session"); }
+  catch (e) {
+    // no API at all (file opened outside Vercel) → preview with demo data
+    if (!e.status || e.status === 404) return startApp(null);
+    return showGate("error", e.message);              // e.g. DATABASE_URL / SESSION_SECRET missing
+  }
+  if (s.needsSetup) return showGate("setup", s.setupEnabled);
+  if (!s.user) return showGate("login");
+  startApp(s.user);
+}
+function startApp(user) {
+  me = user;
+  $("gate").hidden = true;
+  $("me").hidden = !user;
+  if (user) $("me-name").textContent = user.name || user.email;
+  applyPerms();
+  if (!booted) { booted = true; load(); setInterval(load, CONFIG.refreshMinutes * 60000); }
+  else load();
+  setView(location.hash.slice(1));
+}
+$("sign-out").addEventListener("click", async () => { try { await post("/api/session", { action: "logout" }); } catch {} location.reload(); });
+
+const field = (id, label, type = "text", extra = "") => `<label>${label}<input id="${id}" type="${type}" ${extra}></label>`;
+let gateMode = "", gateToken = "";
+async function showGate(mode, arg) {
+  gateMode = mode; $("gate").hidden = false; $("gate-msg").textContent = ""; $("gate-msg").className = "form-msg";
+  const f = $("gate-fields"), sub = $("gate-sub"), btn = $("gate-submit");
+  btn.hidden = false; btn.disabled = false;
+  if (mode === "login") {
+    sub.textContent = "Sign in";
+    f.innerHTML = field("g-email", "Email", "email", 'autocomplete="username" required') + field("g-pass", "Password", "password", 'autocomplete="current-password" required');
+    btn.textContent = "Sign in";
+  } else if (mode === "setup") {
+    sub.textContent = "First-time setup — create the first admin";
+    f.innerHTML = arg
+      ? field("g-name", "Your name", "text", "required") + field("g-email", "Email", "email", 'autocomplete="username" required') +
+        field("g-pass", "Password (10+ characters)", "password", 'autocomplete="new-password" minlength="10" required') + field("g-code", "Setup code (SETUP_CODE in Vercel)", "text", "required")
+      : `<p class="form-msg err">No one has an account yet. In Vercel, add an environment variable <b>SETUP_CODE</b> (any secret word), redeploy, then reload this page.</p>`;
+    btn.textContent = "Create admin"; btn.hidden = !arg;
+  } else if (mode === "invite") {
+    gateToken = arg; sub.textContent = "Checking your link…"; f.innerHTML = ""; btn.hidden = true;
+    try {
+      const inv = await api(`/api/invite?token=${encodeURIComponent(arg)}`);
+      sub.textContent = inv.reset ? "Set a new password" : "You’re invited — create your account";
+      f.innerHTML = `<p class="hint">${inv.email} · ${inv.role === "admin" ? "Admin" : "Member"}</p>` +
+        field("g-name", "Your name", "text", `required value="${(inv.name || "").replace(/"/g, "&quot;")}"`) +
+        field("g-pass", "Password (10+ characters)", "password", 'autocomplete="new-password" minlength="10" required') +
+        field("g-pass2", "Type it again", "password", 'autocomplete="new-password" minlength="10" required');
+      btn.hidden = false; btn.textContent = inv.reset ? "Save password" : "Create account";
+    } catch (e) { sub.textContent = "Invite link"; f.innerHTML = `<p class="form-msg err">${e.message}</p>`; }
+  } else {
+    sub.textContent = "Not set up yet";
+    f.innerHTML = `<p class="form-msg err">${arg}</p><p class="hint">Check DATABASE_URL and SESSION_SECRET in Vercel, then redeploy.</p>`;
+    btn.hidden = true;
+  }
+  f.querySelector("input")?.focus();
+}
+$("gate-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const v = id => ($(id) ? $(id).value : "");
+  const msg = $("gate-msg"), btn = $("gate-submit");
+  msg.className = "form-msg"; msg.textContent = ""; btn.disabled = true;
+  try {
+    let r;
+    if (gateMode === "login") r = await post("/api/session", { action: "login", email: v("g-email"), password: v("g-pass") });
+    if (gateMode === "setup") r = await post("/api/session", { action: "setup", name: v("g-name"), email: v("g-email"), password: v("g-pass"), code: v("g-code") });
+    if (gateMode === "invite") {
+      if (v("g-pass") !== v("g-pass2")) throw new Error("The two passwords don’t match.");
+      r = await post("/api/invite", { token: gateToken, name: v("g-name"), password: v("g-pass") });
+      history.replaceState(null, "", location.pathname);            // drop the token from the address bar
+    }
+    startApp(r.user);
+  } catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; btn.disabled = false; }
 });
-$("team-grid").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches("input")) e.target.blur(); });
-renderTeam();
+
+/* ---------- Users tab (admins) ---------- */
+const when = d => d ? new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—";
+const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let usersData = { users: [], invites: [] };
+function renderFromTeam() {
+  if (!$("ft-body")) return;
+  if (!teamRows) { $("ft-body").innerHTML = `<tr><td colspan="6">Loading the team…</td></tr>`; loadTeamData().then(renderFromTeam); return; }
+  const userBy = Object.fromEntries(usersData.users.map(u => [String(u.email).toLowerCase(), u]));
+  const invBy = Object.fromEntries(usersData.invites.map(i => [String(i.email).toLowerCase(), i]));
+  const people = teamPeople().people.filter(p => !p.hidden).sort((a, b) => TEAM_ORDER.indexOf(a.team) - TEAM_ORDER.indexOf(b.team) || a.name.localeCompare(b.name));
+  let open = 0;
+  $("ft-body").innerHTML = people.map(p => {
+    const em = String(p.email || "").toLowerCase(), u = userBy[em], inv = invBy[em];
+    const can = !!em && !u;
+    if (can) open++;
+    const access = u ? `<span class="access on">${u.role === "admin" ? "Admin" : "Member"}</span>`
+      : inv ? `<span class="access pending">Invited · ${inv.role === "admin" ? "Admin" : "Member"}</span>`
+      : em ? "No access yet" : "Add an email in Team → Edit team";
+    return `<tr>
+      <td>${can ? `<input type="checkbox" class="ft-pick" data-email="${esc(p.email)}" data-name="${esc(p.name)}" aria-label="Invite ${esc(p.name)}">` : ""}</td>
+      <td>${esc(p.name)}</td><td>${esc(p.role || "")}</td><td>${p.team === "director" ? "Director" : TEAM_DEFS[p.team]?.label || ""}</td>
+      <td>${esc(p.email || "—")}</td><td>${access}</td></tr>`;
+  }).join("") || `<tr><td colspan="6">No team members yet.</td></tr>`;
+  $("ft-count").textContent = `${open} without access`;
+  $("ft-all").checked = false;
+  syncFtButton();
+}
+function syncFtButton() {
+  const n = document.querySelectorAll(".ft-pick:checked").length;
+  $("ft-go").disabled = !n;
+  $("ft-go").textContent = n ? `Create ${n} invite link${n === 1 ? "" : "s"}` : "Create invite links";
+}
+$("ft-all").addEventListener("change", e => { document.querySelectorAll(".ft-pick").forEach(c => c.checked = e.target.checked); syncFtButton(); });
+$("ft-body").addEventListener("change", syncFtButton);
+let ftLinks = [];
+$("ft-go").addEventListener("click", async () => {
+  const picks = [...document.querySelectorAll(".ft-pick:checked")].map(c => ({ email: c.dataset.email, name: c.dataset.name }));
+  const role = $("ft-role").value;
+  $("ft-go").disabled = true; $("ft-go").textContent = "Creating…";
+  ftLinks = [];
+  for (const p of picks) {
+    try {
+      const r = await post("/api/users", { action: "invite", name: p.name, email: p.email, role, perms: role === "member" ? DEFAULT_MEMBER_PERMS : [] });
+      ftLinks.push({ ...p, link: r.link });
+    } catch (err) {
+      // already invited → issue a fresh link instead
+      try { const r = await post("/api/users", { action: "link", email: p.email }); ftLinks.push({ ...p, link: r.link }); }
+      catch (e2) { ftLinks.push({ ...p, error: e2.message }); }
+    }
+  }
+  $("ft-links").hidden = false;
+  $("ft-links-body").innerHTML = ftLinks.map((l, i) => `<tr><td>${esc(l.name)}</td><td>${esc(l.email)}</td>
+    <td class="link-cell">${l.error ? `<span class="form-msg err">${esc(l.error)}</span>` : esc(l.link)}</td>
+    <td>${l.link ? `<button class="row-btn" data-ft-copy="${i}">Copy</button><a class="row-btn" href="mailto:${esc(l.email)}?subject=${encodeURIComponent("Your PL Metric Daily access")}&body=${encodeURIComponent(`Hi ${l.name},\n\nHere’s your link to PL Metric Daily — open it to set your password:\n${l.link}\n\nIt works once and expires in 7 days.`)}">Email</a>` : ""}</td></tr>`).join("");
+  await loadUsers();
+});
+const copyText = async t => { try { await navigator.clipboard.writeText(t); return true; } catch { return false; } };
+$("ft-links").addEventListener("click", async e => {
+  const b = e.target.closest("[data-ft-copy]"); if (!b) return;
+  if (await copyText(ftLinks[+b.dataset.ftCopy].link)) { b.textContent = "Copied ✓"; setTimeout(() => b.textContent = "Copy", 1500); }
+});
+$("ft-copy-all").addEventListener("click", async () => {
+  const txt = ftLinks.filter(l => l.link).map(l => `${l.name} (${l.email}): ${l.link}`).join("\n");
+  if (await copyText(txt)) { $("ft-copy-all").textContent = "Copied ✓"; setTimeout(() => $("ft-copy-all").textContent = "Copy all", 1500); }
+});
+
+async function showSetupHelp() {
+  $("users-main").hidden = true; $("setup-box").hidden = false;
+  $("users-count").textContent = "";
+  const box = $("setup-box");
+  box.innerHTML = "<h3>Checking sign-in setup…</h3>";
+  let h = null;
+  try { const r = await fetch("/api/health", { cache: "no-store" }); if (r.ok) h = await r.json(); } catch {}
+  const row = (ok, label, fix) => `<li><span class="${ok ? "ok-mark" : "no-mark"}">${ok ? "✓" : "✗"}</span><span>${label}${ok || !fix ? "" : ` — ${fix}`}</span></li>`;
+  if (!h) {
+    box.innerHTML = `<h3>Users needs the server part of the app</h3>
+      <p class="hint">This page is running without its <b>api/</b> folder, so there’s no sign-in and no Users list. You’re seeing it because the page was opened as a file, or only <b>index.html</b> was uploaded to Vercel.</p>
+      <ul>${row(false, "API deployed", "upload the whole zip (api/, lib/, public/, package.json, vercel.json) to the Vercel project, then redeploy")}</ul>`;
+    return;
+  }
+  const allSet = h.DATABASE_URL && h.SESSION_SECRET && h.database;
+  box.innerHTML = `<h3>Set up sign-in to add people</h3>
+    <p class="hint">Vercel → your project → Settings → Environment Variables, then <b>Redeploy</b>.</p>
+    <ul>
+      ${row(true, "API deployed")}
+      ${row(h.DATABASE_URL, "<b>DATABASE_URL</b> (Neon)", "add your Neon connection string")}
+      ${row(h.SESSION_SECRET, "<b>SESSION_SECRET</b>", "add any long random text (16+ characters)")}
+      ${row(h.database, "Database connects", h.DATABASE_URL ? (h.databaseError || "check the Neon connection string") : "needs DATABASE_URL")}
+      ${row(h.users > 0 || h.SETUP_CODE, "<b>SETUP_CODE</b> (only for the first admin)", "add any secret word")}
+      ${row(h.METABASE_HOST && h.METABASE_API_KEY, "<b>METABASE_HOST</b> + <b>METABASE_API_KEY</b>", "same as your other tools")}
+    </ul>
+    ${allSet ? `<p class="hint">${h.users ? "Everything’s set — sign in to manage users." : "Everything’s set — reload to create the first admin (you)."}</p><button class="primary" onclick="location.reload()">${h.users ? "Sign in" : "Create the first admin"}</button>` : ""}`;
+}
+async function loadUsers() {
+  if (!me) return showSetupHelp();
+  $("users-main").hidden = false; $("setup-box").hidden = true;
+  if (!isAdmin()) return;
+  try {
+    const d = await api("/api/users");
+    usersData = d;
+    renderFromTeam();
+    const activeN = d.users.filter(u => !u.disabled).length;
+    $("users-count").textContent = `${activeN} active${d.invites.length ? ` · ${d.invites.length} invited` : ""}${d.users.length - activeN ? ` · ${d.users.length - activeN} off` : ""}`;
+    const roleSel = (attr, role, self) => `<select class="um-role" ${attr}>${["member", "admin"].map(r => `<option value="${r}"${role === r ? " selected" : ""}>${r}</option>`).join("")}</select>`;
+    const access = u => u.role === "admin" ? `<span class="um-green">everything + users</span>`
+      : `<details class="um-access"><summary>${u.perms.length === 5 ? "full access" : u.perms.length ? esc(u.perms.map(p => PERM_LABELS[p]).join(" · ")) : "no access"}</summary>
+          <div class="perm-list">${Object.entries(PERM_LABELS).map(([k, l]) =>
+            `<label class="perm"><input type="checkbox" data-perm-user="${u.id}" value="${k}"${u.perms.includes(k) ? " checked" : ""}> ${l}</label>`).join("")}</div></details>`;
+    const people = [
+      ...d.users.map(u => ({ kind: "user", sortName: (u.name || u.email).toLowerCase(), html: `<tr class="${u.disabled ? "um-off" : ""}">
+        <td><b>${esc(u.name || "—")}</b><div class="um-dim">${esc(u.email)}</div></td>
+        <td>${roleSel(`data-role="${u.id}"`, u.role)}</td>
+        <td>${access(u)}</td>
+        <td>${u.disabled ? `<span class="um-red">off</span>` : `<b>active</b>`}</td>
+        <td class="um-dim">${when(u.last_login)}</td>
+        <td class="um-acts">${u.id === d.me ? `<span class="um-dim">you</span>` : u.disabled
+          ? `<a class="um-a" data-on="${u.id}">turn on</a> <a class="um-a um-danger" data-remove="${u.id}" data-who="${esc(u.name || u.email)}">delete</a>`
+          : `<a class="um-a" data-link="${esc(u.email)}" data-name="${esc(u.name)}">reset password link</a> <a class="um-a" data-off="${u.id}" data-who="${esc(u.name || u.email)}">turn off</a>`}</td>
+      </tr>` })),
+      ...d.invites.map(i => ({ kind: "invite", sortName: (i.name || i.email).toLowerCase(), html: `<tr>
+        <td><b>${esc(i.name || "—")}</b><div class="um-dim">${esc(i.email)}</div></td>
+        <td><span class="um-dim">${i.role}</span></td>
+        <td>${i.role === "admin" ? `<span class="um-green">everything + users</span>` : `<span class="um-dim">${(() => { const ps = (i.perms || "").split(",").filter(p => PERM_LABELS[p]); return !i.perms || ps.length === 5 ? "full access" : ps.length ? esc(ps.map(p => PERM_LABELS[p]).join(" · ")) : "no access"; })()}</span>`}</td>
+        <td><span class="um-orange">invited</span></td>
+        <td class="um-dim">—</td>
+        <td class="um-acts"><a class="um-a" data-link="${esc(i.email)}" data-name="${esc(i.name)}">new invite link</a> <a class="um-a" data-cancel="${i.id}">cancel</a></td>
+      </tr>` })),
+    ].sort((x, y) => x.sortName.localeCompare(y.sortName));
+    $("users-body").innerHTML = people.map(x => x.html).join("") || `<tr><td colspan="6">No one yet.</td></tr>`;
+  } catch (e) { $("users-body").innerHTML = `<tr><td colspan="6" class="um-red">${esc(e.message)}</td></tr>`; }
+}
+function showLink(link, email, name, days, label) {
+  $("link-out").hidden = false; $("link-text").value = link;
+  $("link-hint").textContent = `${label || "invite link"} for ${email} · works once · ${days} days`;
+  const subject = encodeURIComponent("Your PL Metric Daily access");
+  const bodyTxt = encodeURIComponent(`Hi${name ? " " + name : ""},\n\nHere’s your link to PL Metric Daily — open it to set your password:\n${link}\n\nIt works once and expires in ${days} days.`);
+  $("link-mail").href = `mailto:${email}?subject=${subject}&body=${bodyTxt}`;
+  $("link-text").select();
+}
+$("link-copy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("link-text").value); } catch { $("link-text").select(); document.execCommand("copy"); }
+  $("link-copy").textContent = "Copied ✓"; setTimeout(() => $("link-copy").textContent = "Copy link", 1500);
+});
+const DEFAULT_MEMBER_PERMS = ["metrics", "queue", "team", "targets", "refresh"];   // "member — full access"
+const umMsg = (t, ok) => { const m = $("inv-msg"); m.textContent = t; m.className = "um-msg " + (ok ? "um-green" : "um-red"); };
+$("invite-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  umMsg("", true);
+  const email = $("inv-email").value, name = $("inv-name").value, role = $("inv-role").value;
+  try {
+    const r = await post("/api/users", { action: "invite", name, email, role, perms: role === "member" ? DEFAULT_MEMBER_PERMS : [] });
+    showLink(r.link, email, name, r.days, "invite link");
+    umMsg(`${name || email} added — send them the link.`, true);
+    $("inv-name").value = ""; $("inv-email").value = "";
+    loadUsers();
+  } catch (err) { umMsg(err.message, false); }
+});
+$("view-users").addEventListener("click", async e => {
+  const a = e.target.closest("[data-link],[data-off],[data-on],[data-remove],[data-cancel]"); if (!a) return;
+  e.preventDefault();
+  try {
+    if (a.dataset.link) {
+      const r = await post("/api/users", { action: "link", email: a.dataset.link });
+      showLink(r.link, a.dataset.link, a.dataset.name || "", r.days, a.textContent);
+      umMsg(`New link for ${a.dataset.link} — older links stop working.`, true);
+      $("users-main").scrollIntoView({ behavior: "smooth" });
+    }
+    if (a.dataset.off && confirm(`Turn off ${a.dataset.who}? They’re signed out right away and can’t sign in until you turn them back on.`)) { await post("/api/users", { action: "off", id: Number(a.dataset.off) }); }
+    if (a.dataset.on) await post("/api/users", { action: "on", id: Number(a.dataset.on) });
+    if (a.dataset.remove && confirm(`Delete ${a.dataset.who} for good?`)) await post("/api/users", { action: "remove", id: Number(a.dataset.remove) });
+    if (a.dataset.cancel) await post("/api/users", { action: "cancel", inviteId: Number(a.dataset.cancel) });
+    loadUsers();
+  } catch (err) { umMsg(err.message, false); }
+});
+$("view-users").addEventListener("change", async e => {
+  const box = e.target.closest("[data-perm-user]");
+  if (box) {
+    const id = box.dataset.permUser;
+    const perms = [...document.querySelectorAll(`[data-perm-user="${id}"]:checked`)].map(x => x.value);
+    try { await post("/api/users", { action: "perms", id: Number(id), perms }); box.closest("label").classList.add("saved"); setTimeout(() => box.closest("label")?.classList.remove("saved"), 900); }
+    catch (err) { umMsg(err.message, false); loadUsers(); }
+    return;
+  }
+  const sel = e.target.closest("[data-role]"); if (!sel) return;
+  try { await post("/api/users", { action: "role", id: Number(sel.dataset.role), role: sel.value }); umMsg("Role saved.", true); }
+  catch (err) { umMsg(err.message, false); }
+  loadUsers();
+});
+$("pass-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const m = $("pw-msg");
+  try {
+    await post("/api/session", { action: "password", current: $("pw-cur").value, password: $("pw-new").value });
+    m.className = "um-msg um-green"; m.textContent = "Password changed — other devices are signed out.";
+    $("pw-cur").value = ""; $("pw-new").value = "";
+  } catch (err) { m.className = "um-msg um-red"; m.textContent = err.message; }
+});
 
 /* ---------- Views (Metrics | Queue), bookmarkable via #metrics / #queue ---------- */
 /* ---------- Fit Metrics to the monitor ----------
@@ -1064,7 +2669,7 @@ const FIT = { min: 0.6, max: 1.8, scale: 0.9 };   // shrinks on small screens, g
 let currentView = "metrics";
 function metricsZoom(main) {
   // measure the Metrics view (even when another tab is showing) so every tab shares its size
-  const views = ["metrics", "queue", "team"].map(v => $("view-" + v));
+  const views = ["metrics", "queue", "team", "users"].map(v => $("view-" + v));
   const was = views.map(v => v.hidden);
   views.forEach((v, i) => v.hidden = i !== 0);
   let z = 1;
@@ -1113,9 +2718,12 @@ function scheduleFit(force) {
   requestAnimationFrame(fitToScreen);
 }
 function setView(v) {
-  if (!["metrics", "queue", "team"].includes(v)) v = "metrics";
+  if (!["metrics", "queue", "team", "users"].includes(v) || (v === "users" ? !(isAdmin() || !me) : !can(v))) v = firstAllowedView();
   currentView = v;
-  ["metrics", "queue", "team"].forEach(x => $("view-" + x).hidden = v !== x);
+  ["metrics", "queue", "team", "users"].forEach(x => $("view-" + x).hidden = v !== x);
+  $("no-access").hidden = v !== "none";
+  if (v === "users") loadUsers();
+  if (v === "team") (teamRows ? renderLeaderboard() : loadTeamData());
   if (v === "queue" && queueDirty && typeof rows !== "undefined") { renderQueue(rows); queueDirty = false; }
   document.querySelectorAll("#views button").forEach(b => { if (b.dataset.view === v) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
   scheduleFit(true);
@@ -1162,6 +2770,7 @@ const readTarget = v => { const d = String(v).replace(/[^0-9.]/g, ""); return d 
 document.addEventListener("focusin", e => { if (e.target.matches(".target")) setTimeout(() => e.target.select(), 0); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && e.target.matches(".target")) e.target.blur(); });
 $("tiles").addEventListener("change", e => {
+  if (!can("targets")) return render();
   const key = e.target.dataset.key; if (!key) return;
   saved.targets[key] = readTarget(e.target.value); save(); render();
 });
@@ -1181,8 +2790,7 @@ $("tiles").addEventListener("click", e => {
 $("tiles").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches(".target")) e.target.blur(); });
 
 render();
-load();
-setInterval(load, CONFIG.refreshMinutes * 60000);
+boot();
 </script>
 </body>
-</html> 
+</html>
