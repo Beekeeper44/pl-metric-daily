@@ -84,6 +84,8 @@ The Metrics view scales itself to fill the monitor exactly (no scrolling, no emp
 
 ## Team tab
 - **Director · Oregon + PL** (anyone whose role contains "Director" — Alan) on top.
+- **Who's on which team (from 46168):** `@arenaclub.com` emails → **Oregon**; any other email → **PL**. "Director" in the role → Director. An admin can still move anyone (✎ Edit → Team).
+  Oregon people are never matched to PL roster names, so an Oregon "Pat Castillo" and a PL "Pat Castillo" stay separate.
 - **Oregon Team** from **Metabase 46168** (USER_ID · FULL_NAME · ROLE · EMAIL · LAST_ACTIVITY_PT · TASKS_LAST_14D):
   name, role, "active Xm ago" (green + pulsing dot under 5 minutes, Pacific time, refreshes every minute) and Tasks Last 14 Days.
 - **PL Team** — built-in roster (`PL_ROSTER` in index.html, 129 people from the Team Leveling list): Name · Dept · Title · Tier · Reports to,

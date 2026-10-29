@@ -1431,6 +1431,7 @@ const TEAM_DEFS = {
 };
 const TEAM_ORDER = ["director", "oregon", "pl"];
 const DEFAULT_46168_TEAM = "oregon";
+const OREGON_DOMAIN = /@arenaclub\.com$/i;
 let teamRows = null, teamErr = "", lbMetric = null, lbQuery = "", teamEdits = {}, editingTeam = false;
 const RANK_COLORS = ["#ffd54a", "#cfd8e3", "#e0965a"];
 const AVATAR_COLORS = ["#39ff14", "#7cf0ff", "#ffb84d", "#ff7ab6", "#a98bff", "#5dffa8", "#ffe14d", "#7ab8ff"];
@@ -1504,7 +1505,10 @@ function teamPeople() {
     const e = teamEdits[key] || {};
     const role = e.role ?? (sh.role ? r[sh.role] : "") ?? "";
     const fromMb = sh.team ? String(r[sh.team] || "").toLowerCase() : "";
-    const autoTeam = /director/i.test(role) ? "director" : /pl|precision|label/.test(fromMb) ? "pl" : /oregon|review/.test(fromMb) ? "oregon" : DEFAULT_46168_TEAM;
+    // Oregon = @arenaclub.com emails; anyone else in 46168 is PL (a TEAM column, if 46168 ever has one, wins)
+    const mail = String(sh.email ? r[sh.email] || "" : "").toLowerCase();
+    const byMail = mail ? (OREGON_DOMAIN.test(mail) ? "oregon" : "pl") : DEFAULT_46168_TEAM;
+    const autoTeam = /director/i.test(role) ? "director" : /pl|precision|label/.test(fromMb) ? "pl" : /oregon/.test(fromMb) ? "oregon" : byMail;
     return { key, name: e.name || r[sh.name] || "—", role, email: e.email || (sh.email ? r[sh.email] : ""), team: e.team || autoTeam,
              hidden: !!e.hidden, edited: !!teamEdits[key], manual: false, seen: sh.seen ? r[sh.seen] : null,
              nums: Object.fromEntries(sh.nums.map(k => [k, num(r[k])])) };
@@ -1514,6 +1518,7 @@ function teamPeople() {
   const firstLast = n => { const w = slug(n).split("-").filter(x => x.length > 1 && !/^(jr|sr|ii|iii|ma)$/.test(x)); return w.length ? w[0] + "|" + w[w.length - 1] : ""; };
   const byName = new Map(), byFL = new Map(), byMail = new Map();
   out.forEach(p => {
+    if (p.email && OREGON_DOMAIN.test(p.email)) return;      // Oregon people are never matched to the PL roster
     byName.set(slug(p.name), p);
     const fl = firstLast(p.name); if (fl) byFL.set(fl, byFL.has(fl) ? null : p);      // ambiguous first+last → no match
     if (p.email) byMail.set(String(p.email).toLowerCase().split("@")[0].replace(/[^a-z]/g, ""), p);
