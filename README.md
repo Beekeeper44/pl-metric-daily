@@ -131,8 +131,10 @@ The **Refresh Metabase** button re-runs both questions (All Orders (PL) 4999 + t
 ## Push skills to Arena admin
 - Person window → **⇪ Push to admin** (admins). It compares the window's skills with what was last written to admin and lists only the changes
   (+ Crop, − Mcp Access…). **Confirm** → one call per skill; each shows ✓ / ✗ with the HTTP status. Failed ones stay in the list for the next push.
-- **Dry run first:** `SKILLS_DRY_RUN=true` (default) writes nothing and shows the exact requests (method, URL, body) so they can be checked against admin.
-  Set `SKILLS_DRY_RUN=false` in Vercel and redeploy to go live.
+- **Live progress:** after **Write N to admin** every skill shows as a chip that spins while it's being written and turns ✓ green or ✗ red (with admin's reply) —
+  with a progress bar and "8 of 18 done · writing Review, …". Skills go 4 per request, one request at a time.
+- **Completion notification** (bottom right): green "all N skill changes written to Arena admin" (closes itself), or red with what failed (stays until dismissed).
+  Group pushes show a progress bar in the green bar and the same notification at the end.
 - **Who:** admin user IDs come from **Metabase 46168** (`USER_ID`) for everyone. PL roster people are matched to 46168 by full name, first + last name, or email —
   they stay on the PL list with their roster dept/title/tier/manager and also get their USER_ID, email, last active and tasks (and drop off the Oregon list).
   Anyone 46168 doesn't have can get an ID pasted in ✎ Edit → **Admin user ID** (that override wins).
@@ -140,4 +142,4 @@ The **Refresh Metabase** button re-runs both questions (All Orders (PL) 4999 + t
 - **The call** (same as admin's Edit Skills screen): `POST https://admin-api.arenaclub.com/v2/skill/` with `{"userId":"…","kind":"verify_crop","enabled":true}` —
   `enabled:false` turns it off. Skill names are snake_case ("Verify Crop" → `verify_crop`); odd ones can be mapped with `ADMIN_SKILL_NAMES`.
   `GET /api/admin-skills` shows a sample request and any missing settings.
-- **Audit log** (Neon `pmd_admin_log`): who, person, user ID, skill, on/off, dry run or live, ok, HTTP status, response. `GET /api/admin-skills?log=1`.
+- **Audit log** (Neon `pmd_admin_log`): who, person, user ID, skill, on/off, ok, HTTP status, response. `GET /api/admin-skills?log=1`.

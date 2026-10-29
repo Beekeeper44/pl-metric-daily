@@ -76,6 +76,7 @@
   .lb-bar span { display: block; height: 100%; background: var(--c, #39ff14); }
   .lb-val { font: 800 1.35rem var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
   .lb-val small { display: block; font: 600 .72rem var(--font-body); text-transform: uppercase; letter-spacing: .04em; }
+  .lb-card { contain: layout paint; }
   .lb-card.director { grid-column: 1 / -1; border-top-color: #39ff14; }
   .tm-row { display: grid; grid-template-columns: minmax(0, 1fr) auto 10em; align-items: center; gap: 4px 16px; padding: 9px 10px; border-bottom: 1px solid var(--line); }
   .tm-row .lb-edit-row { grid-column: 1 / -1; }
@@ -100,7 +101,7 @@
   .pm[open] { animation: pm-in .16s ease-out; }
   @keyframes pm-in { from { transform: translateY(8px) scale(.99); opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .pm[open] { animation: none; } }
-  .pm::backdrop { background: rgba(4, 7, 10, .78); backdrop-filter: blur(2px); }
+  .pm::backdrop { background: rgba(4, 7, 10, .82); }
   .pm-inner { display: grid; gap: 20px; padding: 26px 30px 24px; }
   .pm-head { display: flex; align-items: flex-start; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
   .pm-title { display: grid; gap: 10px; }
@@ -189,16 +190,41 @@
   .pm-push { display: grid; gap: 10px; padding: 14px 16px; border-radius: 12px; border: 1.5px solid #7cf0ff; background: color-mix(in srgb, #7cf0ff 7%, transparent); }
   .pm-push p { margin: 0; font-weight: 600; }
   .push-mode { justify-self: start; padding: 2px 10px; border-radius: 999px; font: 800 .75rem var(--font-body); letter-spacing: .04em; }
-  .push-mode.dry { background: #ffb84d; color: #2a1800; } .push-mode.live { background: #e04848; color: #fff; }
+  .push-mode.live { background: #7cf0ff; color: #04222a; }
   .push-uid { font: 600 .8rem ui-monospace, Menlo, monospace; opacity: .8; }
   .push-list { display: flex; flex-wrap: wrap; gap: 6px; }
   .push-chip { padding: 4px 12px; border-radius: 999px; font: 700 .85rem var(--font-body); }
   .push-chip.on { background: rgba(47, 184, 74, .22); border: 1px solid rgba(47, 184, 74, .75); }
   .push-chip.off { background: rgba(224, 72, 72, .22); border: 1px solid rgba(224, 72, 72, .75); }
-  .push-results { display: grid; gap: 4px; max-height: 40vh; overflow: auto; font-size: .9rem; }
+  .push-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; font-size: .88rem; align-items: start; }
+  .push-results > div { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 5px 10px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); }
+  .push-results > div.ok { border-color: rgba(47, 184, 74, .75); background: rgba(47, 184, 74, .16); }
+  .push-results > div.bad { border-color: rgba(224, 72, 72, .8); background: rgba(224, 72, 72, .16); border-radius: 10px; }
+  .push-results > div code:empty { display: none; }
   .push-results .ok b { color: #39ff14; } .push-results .bad b { color: var(--danger); }
-  .push-results code { display: block; margin: 1px 0 4px 18px; font: .75rem ui-monospace, Menlo, monospace; opacity: .85; word-break: break-all; }
+  .push-results code { display: block; flex-basis: 100%; margin: 2px 0 0 24px; font: .75rem ui-monospace, Menlo, monospace; opacity: .85; word-break: break-all; }
   .push-acts { display: flex; gap: 8px; align-items: center; } .push-acts .spacer { flex: 1; }
+  .push-mode.good { background: #39ff14; color: #0b1a05; } .push-mode.bad { background: #e04848; color: #fff; }
+  .push-bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .push-bar span, #push-fill { display: block; height: 100%; width: 0; background: #39ff14; transition: width .25s ease; box-shadow: 0 0 8px rgba(57, 255, 20, .6); }
+  .push-bar.small { flex: 1; min-width: 120px; height: 6px; }
+  .push-results .pending { opacity: .55; } .push-results .working { opacity: 1; }
+  .push-ic { display: inline-grid; place-items: center; width: 18px; }
+  .spin { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line); border-top-color: #39ff14; }
+  .working .spin { animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .toasts { position: fixed; right: 18px; bottom: 18px; z-index: 100; display: grid; gap: 10px; width: min(420px, calc(100vw - 36px)); }
+  .toast { display: flex; gap: 12px; align-items: flex-start; padding: 14px 14px 14px 16px; border-radius: 12px; background: var(--surface); color: var(--ink);
+    border: 1.5px solid #39ff14; box-shadow: 0 12px 40px rgba(0, 0, 0, .5), 0 0 14px rgba(57, 255, 20, .25); font: 600 .95rem/1.35 var(--font-body);
+    animation: toast-in .2s ease-out; transition: opacity .3s, transform .3s; }
+  .toast.bad { border-color: #e04848; box-shadow: 0 12px 40px rgba(0, 0, 0, .5), 0 0 14px rgba(224, 72, 72, .3); }
+  .toast.out { opacity: 0; transform: translateY(8px); }
+  .toast-ic { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; background: #39ff14; color: #0b1a05; }
+  .toast.bad .toast-ic { background: #e04848; color: #fff; }
+  .toast-body { flex: 1; }
+  .toast-x { background: none; border: 0; color: var(--ink); cursor: pointer; font-size: .9rem; opacity: .7; }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(10px); } }
+  @media (prefers-reduced-motion: reduce) { .toast, .working .spin { animation: none; } }
   .pm-edit-btn { background: #39ff14; color: #0b1a05; border: 0; border-radius: 8px; padding: 9px 18px; font: 800 .95rem var(--font-body); cursor: pointer; }
   .pm.editing { border-top-color: #ffb84d; }
   .pm.editing .pm-head h2::after { content: "editing"; margin-left: 12px; vertical-align: middle; font: 800 .75rem var(--font-body); letter-spacing: .05em; text-transform: uppercase;
@@ -760,6 +786,8 @@
   </section>
 </main>
 
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
 <!-- ===== PERSON (click a name on the Team tab) ===== -->
 <dialog class="pm" id="person-modal" aria-labelledby="pm-name">
   <form method="dialog" class="pm-inner" id="pm-form">
@@ -1137,7 +1165,9 @@ function range() {
 }
 
 /* ---------- Render ---------- */
+let metricsVersion = 0;
 function render() {
+  metricsVersion++;
   const { total: dur, left } = range();
   const doneRows = rows.filter(r => r.done);
   const queue = rows.filter(r => !r.done);
@@ -1948,7 +1978,7 @@ async function applyGroupOption(id, n) {
 async function pushGroup() {
   const keys = (bulkState?.done || []).filter(k => lastPeople[k]?.adminUserId);
   const st = await adminApiStatus();
-  if (!confirm(`${st?.dryRun ? "DRY RUN — nothing will be written.\n\n" : ""}Push skill changes for ${keys.length} people to Arena admin?`)) return;
+  if (!confirm(`Write skill changes for ${keys.length} people to Arena admin?`)) return;
   let ok = 0, bad = 0, calls = 0, i = 0;
   setBulk(`<span>Pushing to admin… 0 / ${keys.length}</span>`);
   for (const k of keys) {
@@ -1959,10 +1989,12 @@ async function pushGroup() {
       try { const r = await post("/api/admin-skills", { key: k, userId: p.adminUserId, changes, confirm: true }); calls += r.results.length; r.ok ? ok++ : bad++; }
       catch { bad++; }
     } else ok++;
-    setBulk(`<span>Pushing to admin… ${i} / ${keys.length}</span>`);
+    setBulk(`<span>Writing to Arena admin… <b>${i}</b> / ${keys.length} — ${esc(p.name)}</span><span class="push-bar small"><span style="width:${(i / keys.length) * 100}%"></span></span>`);
   }
   await loadTeamEdits(); renderLeaderboard();
-  setBulk(`<span class="push-mode ${st?.dryRun ? "dry" : "live"}">${st?.dryRun ? "DRY RUN" : "LIVE"}</span><span><b>${ok}</b> people ${st?.dryRun ? "checked" : "up to date in admin"}${bad ? ` · <span class="um-red">${bad} with errors — open them and press ⇪ Push to see which skills</span>` : ""} · ${calls} skill calls.</span>
+  bad ? toast(`Group push finished: <b>${ok}</b> of ${keys.length} people written to admin, <b>${bad}</b> with errors — open them and press ⇪ Push to retry.`, "bad", 0)
+      : toast(`Group push finished: all <b>${keys.length}</b> people written to Arena admin (${calls} skill changes).`, "ok");
+  setBulk(`<span><b>${ok}</b> people up to date in admin${bad ? ` · <span class="um-red">${bad} with errors — open them and press ⇪ Push to see which skills</span>` : ""} · ${calls} skill calls.</span>
     <span class="spacer"></span><button class="row-btn" data-bulk-close="1">Done</button>`);
 }
 const rosterIdx = Object.fromEntries(PL_ROSTER.map((r, i) => ["pl:" + slug(r[0]), i]));
@@ -2114,25 +2146,45 @@ function openPerson(key, edit = false) {
   fitPm();
 }
 // keep the whole window on screen: shrink its contents until nothing scrolls
+const pmFitCache = {};
 function fitPm() {
   const dlg = $("person-modal"), inner = $("pm-form");
   if (!dlg.open) return;
   const room = innerHeight * 0.96 - 14;   // dialog borders + a little air
   const fits = z => { inner.style.zoom = z; return inner.getBoundingClientRect().height <= room; };
-  if (fits(1)) return;
+  const key = `${innerWidth}x${innerHeight}|${pmEditing}|${!!pmSetup}|${!$("pm-push").hidden}`;
+  if (pmFitCache[key] && fits(pmFitCache[key])) return;           // same screen + same panels → reuse (1 layout pass)
+  if (fits(1)) { pmFitCache[key] = 1; return; }
   // largest zoom that fits (pills re-wrap as it shrinks, so search instead of dividing)
   let lo = 0.5, hi = 1;
-  for (let i = 0; i < 9; i++) { const mid = (lo + hi) / 2; if (fits(mid)) lo = mid; else hi = mid; }
-  inner.style.zoom = lo;
+  for (let i = 0; i < 6; i++) { const mid = (lo + hi) / 2; if (fits(mid)) lo = mid; else hi = mid; }
+  inner.style.zoom = lo; pmFitCache[key] = lo;
 }
 addEventListener("resize", () => fitPm());
+$("person-modal").addEventListener("close", () => { const t = $("toasts"); if (t && t.parentNode !== document.body) document.body.appendChild(t); });
+/* ---- Toast notifications (bottom right) ---- */
+function toast(html, kind = "ok", ms = 6000) {
+  const box = $("toasts"); if (!box) return;
+  // a modal window sits in the browser's top layer — put the toasts inside it so they show on top
+  const dlg = $("person-modal");
+  const host = dlg && dlg.open ? dlg : document.body;
+  if (box.parentNode !== host) host.appendChild(box);
+  const t = document.createElement("div");
+  t.className = `toast ${kind}`;
+  t.innerHTML = `<span class="toast-ic">${kind === "ok" ? "✓" : kind === "bad" ? "!" : "⇪"}</span><div class="toast-body">${html}</div><button class="toast-x" aria-label="Dismiss">✕</button>`;
+  t.querySelector(".toast-x").onclick = () => t.remove();
+  box.appendChild(t);
+  if (ms) setTimeout(() => { t.classList.add("out"); setTimeout(() => t.remove(), 300); }, ms);
+  return t;
+}
+
 /* ---- Push to Arena admin ----
    Shows what will change in admin (compared with the last push), asks to confirm, then writes
-   one call per skill through /api/admin-skills. SKILLS_DRY_RUN=true (default) only shows the requests. */
+   one call per skill through /api/admin-skills. */
 let adminApi = null;
 async function adminApiStatus() {
   if (adminApi || !isAdmin()) return adminApi;
-  try { adminApi = await api("/api/admin-skills"); } catch { adminApi = { dryRun: true, missing: ["(couldn’t reach /api/admin-skills)"] }; }
+  try { adminApi = await api("/api/admin-skills"); } catch { adminApi = { missing: ["(couldn’t reach /api/admin-skills)"] }; }
   return adminApi;
 }
 function pushDiff(p) {
@@ -2144,7 +2196,7 @@ async function showPush() {
   const st = await adminApiStatus();
   const diff = pushDiff(p);
   box.hidden = false;
-  const mode = st?.dryRun ? `<span class="push-mode dry">DRY RUN — nothing is written yet</span>` : `<span class="push-mode live">LIVE — writes to admin</span>`;
+  const mode = `<span class="push-mode live">Writes to Arena admin</span>`;
   if (!p.adminUserId) {
     box.innerHTML = `${mode}<p><b>${esc(p.name)}</b> isn’t in Metabase 46168, so there’s no admin user ID to write to. Check their name in 46168, or press <b>✎ Edit</b> and paste their <b>Admin user ID</b>.</p>
       <div class="push-acts"><button type="button" class="row-btn" data-push-close="1">OK</button></div>`;
@@ -2153,28 +2205,53 @@ async function showPush() {
   } else {
     box.innerHTML = `${mode}<p>Push <b>${diff.length}</b> change${diff.length === 1 ? "" : "s"} to admin for <b>${esc(p.name)}</b> <span class="push-uid">${esc(p.adminUserId)}</span>:</p>
       <div class="push-list">${diff.map(c => `<span class="push-chip ${c.enabled ? "on" : "off"}">${c.enabled ? "+" : "−"} ${esc(c.skill)}</span>`).join("")}</div>
-      ${st?.missing?.length && !st.dryRun ? `<p class="um-red">Admin API settings missing: ${esc(st.missing.join(", "))}</p>` : ""}
+      ${st?.missing?.length ? `<p class="um-red">Admin API settings missing in Vercel: ${esc(st.missing.join(", "))}</p>` : ""}
       <div class="push-acts"><span class="spacer"></span><button type="button" class="row-btn" data-push-close="1">Cancel</button>
-        <button type="button" class="primary" data-push-go="1">${st?.dryRun ? "Run dry run" : `Write ${diff.length} to admin`}</button></div>`;
+        <button type="button" class="primary" data-push-go="1">Write ${diff.length} to admin</button></div>`;
   }
   fitPm();
 }
 async function doPush() {
   const p = lastPeople[pmKey], box = $("pm-push"), diff = pushDiff(p);
-  box.querySelector("[data-push-go]").disabled = true; box.querySelector("[data-push-go]").textContent = "Working…";
-  try {
-    const r = await post("/api/admin-skills", { key: pmKey, userId: p.adminUserId, changes: diff, confirm: true });
-    if (!r.dryRun) { await loadTeamEdits(); renderLeaderboard(); }
-    const okN = r.results.filter(x => x.ok).length;
-    box.innerHTML = `<span class="push-mode ${r.dryRun ? "dry" : "live"}">${r.dryRun ? "DRY RUN" : "LIVE"}</span>
-      <p>${r.dryRun ? `These <b>${r.results.length}</b> requests would be sent:` : `<b>${okN}</b> of <b>${r.results.length}</b> written to admin.`}</p>
-      <div class="push-results">${r.results.map(x => `<div class="${x.ok ? "ok" : "bad"}"><b>${x.ok ? "✓" : "✗"}</b> ${x.enabled ? "+" : "−"} ${esc(x.skill)}
-        <code>${esc(r.dryRun ? `${x.request.method} ${x.request.url}${x.request.body ? " " + x.request.body : ""}` : `${x.status} ${x.detail || ""}`)}</code></div>`).join("")}</div>
-      <div class="push-acts"><span class="spacer"></span><button type="button" class="row-btn" data-push-close="1">Close</button></div>`;
-  } catch (err) {
-    box.insertAdjacentHTML("beforeend", `<p class="um-red">${esc(err.message)}</p>`);
-  }
+  const key = pmKey, name = p.name;
+  // live view: every skill starts as "waiting" and flips to ✓ / ✗ as admin answers
+  box.innerHTML = `<span class="push-mode live">Writing to Arena admin</span>
+    <p class="push-status"><b id="push-done">0</b> of <b>${diff.length}</b> done · <span id="push-now">starting…</span></p>
+    <div class="push-bar"><span id="push-fill"></span></div>
+    <div class="push-results">${diff.map((c, i) => `<div class="pending" id="push-row-${i}"><b class="push-ic"><i class="spin"></i></b> ${c.enabled ? "+" : "−"} ${esc(c.skill)} <code></code></div>`).join("")}</div>
+    <div class="push-acts"><span class="spacer"></span><button type="button" class="row-btn" data-push-close="1" disabled>Close</button></div>`;
   fitPm();
+  let done = 0, ok = 0;
+  const failed = [];
+  const CHUNK = 4;                                   // a few skills per request, one request at a time (keeps admin happy)
+  for (let start = 0; start < diff.length; start += CHUNK) {
+    const part = diff.slice(start, start + CHUNK);
+    $("push-now") && ($("push-now").textContent = `writing ${part.map(c => c.skill).join(", ")}`);
+    part.forEach((c, j) => $(`push-row-${start + j}`)?.classList.add("working"));
+    let res;
+    try { res = (await post("/api/admin-skills", { key, userId: p.adminUserId, changes: part, confirm: true })).results; }
+    catch (err) { res = part.map(c => ({ skill: c.skill, ok: false, status: 0, detail: err.message })); }
+    part.forEach((c, j) => {
+      const r = res.find(x => x.skill === c.skill) || { ok: false, status: 0, detail: "no answer" };
+      const row = $(`push-row-${start + j}`);
+      if (row) {
+        row.className = r.ok ? "ok" : "bad";
+        row.querySelector(".push-ic").textContent = r.ok ? "✓" : "✗";
+        if (!r.ok) row.querySelector("code").textContent = `${r.status || ""} ${r.detail || ""}`;
+      }
+      done++; if (r.ok) ok++; else failed.push(c.skill);
+    });
+    $("push-done") && ($("push-done").textContent = done);
+    $("push-fill") && ($("push-fill").style.width = `${(done / diff.length) * 100}%`);
+  }
+  $("push-now") && ($("push-now").textContent = failed.length ? `${failed.length} didn’t go through` : "all written ✓");
+  box.querySelector(".push-mode").textContent = failed.length ? "Finished with errors" : "Done";
+  box.querySelector(".push-mode").className = `push-mode ${failed.length ? "bad" : "good"}`;
+  const closeBtn = box.querySelector("[data-push-close]"); if (closeBtn) closeBtn.disabled = false;
+  await loadTeamEdits(); renderLeaderboard();
+  failed.length
+    ? toast(`<b>${esc(name)}</b>: ${ok} of ${diff.length} skills written to admin.<br>${failed.length} failed — ${esc(failed.slice(0, 4).join(", "))}${failed.length > 4 ? "…" : ""}. Press ⇪ Push again to retry.`, "bad", 0)
+    : toast(`<b>${esc(name)}</b>: all <b>${ok}</b> skill change${ok === 1 ? "" : "s"} written to Arena admin.`, "ok");
 }
 
 /* ---- 1st / 2nd / 3rd Option: saved skill sets per person ----
@@ -2208,7 +2285,7 @@ function pasteSkills() {
   if (!copiedSkills) return;
   pmSkills = { ...copiedSkills.skills };
   if (pmPresets.active) { pmPresets.active = null; savePresets().catch(() => {}); }
-  renderPmSkills();
+  updatePmSkills();
   if (!pmEditing) saveSkillsNow();
   flashPm(`Pasted ${copiedSkills.name}’s skills${pmEditing ? " — press Save to keep them" : ""}`, true);
 }
@@ -2259,6 +2336,30 @@ function flashPm(t, ok) {
   m.className = "um-msg " + (ok ? "um-green" : "um-red"); m.textContent = t;
   clearTimeout(m._t); m._t = setTimeout(() => { m.textContent = ""; }, 2500);
 }
+// fast path: only flip classes and counts on the existing pills
+function updatePmSkills() {
+  const box = $("pm-skills");
+  if (!box || !box.firstElementChild) return renderPmSkills();
+  const clickable = canEditTeam();
+  box.querySelectorAll("[data-skill]").forEach(b => {
+    const k = b.dataset.skill;
+    const st = pmSetup ? (pmSetupSel.has(k) ? "on pick" : "unset") : pmSkills[k] === true ? "on" : pmSkills[k] === false ? "off" : "unset";
+    const cls = "sk " + st;
+    if (b.className !== cls) { b.className = cls; b.setAttribute("aria-pressed", st.startsWith("on")); }
+    b.title = `${k}: ${st.startsWith("on") ? "on" : st === "off" ? "off" : "not set"}${clickable ? " — click to turn " + (st.startsWith("on") ? "off" : "on") : ""}`;
+  });
+  box.querySelectorAll(".sk-group").forEach((sec, i) => {
+    const list = SKILL_GROUPS[i][1];
+    const n = pmSetup ? list.filter(k => pmSetupSel.has(k)).length : list.filter(k => pmSkills[k] === true).length;
+    const nEl = sec.querySelector(".sk-n"); nEl.textContent = `${n}/${list.length}`; nEl.classList.toggle("full", n === list.length);
+    sec.querySelectorAll("[data-sk-group]").forEach(b => { if (b.classList.contains("sk-mini")) b.textContent = n === list.length ? "all off" : "all on"; });
+  });
+  const on = SKILLS.filter(k => pmSkills[k] === true).length, off = SKILLS.filter(k => pmSkills[k] === false).length;
+  $("pm-skill-count").innerHTML = on + off
+    ? `<b class="um-green">${on}</b> on · <b class="um-red">${off}</b> off${SKILLS.length - on - off ? ` · ${SKILLS.length - on - off} not set` : ""}`
+    : `not set yet${pmEditing ? " — click a skill to turn it on" : ""}`;
+  renderPmOpts();
+}
 function renderPmSkills() {
   requestAnimationFrame(fitPm);
   renderPmOpts();
@@ -2289,10 +2390,10 @@ $("person-modal").addEventListener("click", async e => {
   const ob = e.target.closest("[data-opt]");
   if (ob && canEditTeam()) {
     const n = ob.dataset.opt, list = pmPresets.opts[n] || [];
-    if (!list.length) { pmSetup = n; pmSetupSel = new Set(SKILLS.filter(k => pmSkills[k] === true)); return renderPmSkills(); }
+    if (!list.length) { pmSetup = n; pmSetupSel = new Set(SKILLS.filter(k => pmSkills[k] === true)); return updatePmSkills(); }
     pmSkills = Object.fromEntries(SKILLS.map(k => [k, list.includes(k)]));
     pmPresets.active = n; pmSetup = null;
-    renderPmSkills();
+    updatePmSkills();
     try { if (!me) throw new Error("Sign in on the live site to save."); await post("/api/team", { action: "skills", key: pmKey, skills: pmSkills }); await savePresets();
       if (lastPeople[pmKey]) lastPeople[pmKey].skills = { ...pmSkills };
       teamEdits[pmKey] = { ...(teamEdits[pmKey] || { key: pmKey }), skills: JSON.stringify(pmSkills), presets: JSON.stringify(pmPresets) };
@@ -2301,29 +2402,29 @@ $("person-modal").addEventListener("click", async e => {
     return;
   }
   const oe = e.target.closest("[data-opt-edit]");
-  if (oe) { const n = oe.dataset.optEdit; pmSetup = pmSetup === n ? null : n; pmSetupSel = new Set((pmPresets.opts[n] || []).length ? pmPresets.opts[n] : SKILLS.filter(k => pmSkills[k] === true)); return renderPmSkills(); }
-  if (e.target.closest("[data-opt-cancel]")) { pmSetup = null; return renderPmSkills(); }
-  if (e.target.closest("[data-opt-clear]")) { pmSetupSel = new Set(); return renderPmSkills(); }
-  if (e.target.closest("[data-opt-copy]")) { pmSetupSel = new Set(SKILLS.filter(k => pmSkills[k] === true)); return renderPmSkills(); }
+  if (oe) { const n = oe.dataset.optEdit; pmSetup = pmSetup === n ? null : n; pmSetupSel = new Set((pmPresets.opts[n] || []).length ? pmPresets.opts[n] : SKILLS.filter(k => pmSkills[k] === true)); updatePmSkills(); return requestAnimationFrame(fitPm); }
+  if (e.target.closest("[data-opt-cancel]")) { pmSetup = null; updatePmSkills(); return requestAnimationFrame(fitPm); }
+  if (e.target.closest("[data-opt-clear]")) { pmSetupSel = new Set(); return updatePmSkills(); }
+  if (e.target.closest("[data-opt-copy]")) { pmSetupSel = new Set(SKILLS.filter(k => pmSkills[k] === true)); return updatePmSkills(); }
   if (e.target.closest("[data-opt-save]")) {
     const n = pmSetup; pmPresets.opts[n] = SKILLS.filter(k => pmSetupSel.has(k)); pmSetup = null;
-    renderPmSkills();
+    updatePmSkills();
     try { await savePresets(); flashPm(`${OPTS.find(o => o[0] === n)[1]} saved — click it to switch to it`, true); } catch (err) { flashPm(err.message, false); }
     return;
   }
   if (pmSetup) {                                                   // setting up an option: skills/rows pick, nothing is saved yet
     const k = e.target.closest("[data-skill]")?.dataset.skill;
-    if (k) { pmSetupSel.has(k) ? pmSetupSel.delete(k) : pmSetupSel.add(k); return renderPmSkills(); }
+    if (k) { pmSetupSel.has(k) ? pmSetupSel.delete(k) : pmSetupSel.add(k); return updatePmSkills(); }
     const g = e.target.closest("[data-sk-group]")?.dataset.skGroup;
-    if (g) { const list = SKILL_GROUPS.find(x => x[0] === g)[1]; const all = list.every(x => pmSetupSel.has(x)); list.forEach(x => all ? pmSetupSel.delete(x) : pmSetupSel.add(x)); return renderPmSkills(); }
+    if (g) { const list = SKILL_GROUPS.find(x => x[0] === g)[1]; const all = list.every(x => pmSetupSel.has(x)); list.forEach(x => all ? pmSetupSel.delete(x) : pmSetupSel.add(x)); return updatePmSkills(); }
     const a = e.target.closest("[data-sk-all]")?.dataset.skAll;
-    if (a) { pmSetupSel = a === "on" ? new Set(SKILLS) : new Set(); return renderPmSkills(); }
+    if (a) { pmSetupSel = a === "on" ? new Set(SKILLS) : new Set(); return updatePmSkills(); }
   }
   const sk = e.target.closest("[data-skill]");
   if (sk && canEditTeam()) {
     const k = sk.dataset.skill; pmSkills[k] = pmSkills[k] === true ? false : true;
     if (pmPresets.active) { pmPresets.active = null; savePresets().catch(() => {}); }
-    renderPmSkills();
+    updatePmSkills();
     if (!pmEditing) saveSkillsNow();          // view mode: each click is saved straight away
     return;
   }
@@ -2332,12 +2433,12 @@ $("person-modal").addEventListener("click", async e => {
     const list = SKILL_GROUPS.find(x => x[0] === grp.dataset.skGroup)[1];
     const allOn = list.every(k => pmSkills[k] === true);
     list.forEach(k => pmSkills[k] = !allOn);
-    renderPmSkills();
+    updatePmSkills();
     if (!pmEditing) saveSkillsNow();
     return;
   }
   const all = e.target.closest("[data-sk-all]");
-  if (all) { const v = all.dataset.skAll; pmSkills = v === "clear" ? {} : Object.fromEntries(SKILLS.map(k => [k, v === "on"])); renderPmSkills(); if (!pmEditing) saveSkillsNow(); return; }
+  if (all) { const v = all.dataset.skAll; pmSkills = v === "clear" ? {} : Object.fromEntries(SKILLS.map(k => [k, v === "on"])); updatePmSkills(); if (!pmEditing) saveSkillsNow(); return; }
   const id = e.target.id;
   if (id === "pm-close" || id === "pm-cancel") return $("person-modal").close();
   if (id === "pm-edit") return openPerson(pmKey, true);
@@ -2691,11 +2792,13 @@ function metricsZoom(main) {
   views.forEach((v, i) => v.hidden = was[i]);
   return z;
 }
+let zoomCache = { key: "", z: 1 };
 function fitToScreen() {
   const main = document.querySelector("main");
-  main.style.zoom = 1;
-  if (innerWidth < 900) return;
-  const z = metricsZoom(main);
+  if (innerWidth < 900) { main.style.zoom = 1; return; }
+  const key = `${innerWidth}x${innerHeight}|${metricsVersion}`;
+  if (zoomCache.key !== key) { main.style.zoom = 1; zoomCache = { key, z: metricsZoom(main) }; }   // the expensive part, only when needed
+  const z = zoomCache.z;
   if (currentView === "metrics") { main.style.zoom = z; return; }
   // Queue / Team: same size as Metrics; only shrink if a table would need sideways scrolling
   const wrap = document.querySelector(`#view-${currentView} .table-wrap`);
