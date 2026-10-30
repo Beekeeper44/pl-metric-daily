@@ -1544,9 +1544,31 @@ function teamShape(rs) {
     nums: keys.filter(k => isNum(k) && !/(^|_)id$|^id_|uuid|phone|zip/i.test(k)),
   };
 }
+let teamSig = "";
 async function loadTeamEdits() {
   if (!me) return;
-  try { const d = await api("/api/team"); teamEdits = Object.fromEntries(d.people.map(p => [p.key, p])); } catch {}
+  try { const d = await api("/api/team"); teamSig = JSON.stringify(d.people); teamEdits = Object.fromEntries(d.people.map(p => [p.key, p])); } catch {}
+}
+/* Live team: every 20 s pick up skills / options / names / order that anyone else saved, and redraw.
+   Waits while you're mid-change here (edit mode, dragging, typing in the table, a person window open). */
+function teamBusy() {
+  const dlg = $("person-modal");
+  return editingTeam || dragKey || (dlg && dlg.open) || document.activeElement?.closest?.("#lb-grid input, #lb-grid select, #lb-grid textarea");
+}
+async function syncTeam() {
+  if (!me || !teamRows || teamBusy()) return;
+  let d; try { d = await api("/api/team"); } catch { return; }
+  const sig = JSON.stringify(d.people);
+  if (sig === teamSig || teamBusy()) return;
+  teamSig = sig; teamEdits = Object.fromEntries(d.people.map(p => [p.key, p]));
+  renderLeaderboard();
+}
+let teamSyncTimer = null;
+function startTeamSync() {
+  if (teamSyncTimer) return;
+  teamSyncTimer = setInterval(syncTeam, 20000);
+  addEventListener("focus", syncTeam);
+  $("person-modal")?.addEventListener("close", () => setTimeout(syncTeam, 300));   // catch up right after a window closes
 }
 async function loadTeamData() {
   if (forcedDemo || demoMode) { teamRows = demoTeam(); teamErr = ""; return renderLeaderboard(); }
@@ -2683,7 +2705,7 @@ function startApp(user) {
   $("me").hidden = !user;
   if (user) $("me-name").textContent = user.name || user.email;
   applyPerms();
-  if (user) startShared();
+  if (user) { startShared(); startTeamSync(); }
   if (!booted) { booted = true; load(); setInterval(load, CONFIG.refreshMinutes * 60000); }
   else load();
   setView(location.hash.slice(1));
