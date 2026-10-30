@@ -81,6 +81,7 @@ The Metrics view scales itself to fill the monitor exactly (no scrolling, no emp
 - The status bar shows how many rows came back from 4999 and 46135. **Queue → All Rows** lists every row returned.
 
 ## Tabs
+The Users tab always stays at normal size (it never shrinks to fit); its action links wrap instead.
 **Metrics · Queue · Team** — all three use the same size (the Metrics fit-to-screen scale); a table only shrinks if it would otherwise scroll sideways.
 
 ## Team tab

@@ -401,7 +401,8 @@
   .um-role { padding: 7px 8px !important; }
   .um-a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; margin-right: 8px; white-space: nowrap; }
   .um-a:hover { color: #39ff14; } .um-a.um-danger:hover { color: var(--danger); }
-  .um-acts { white-space: nowrap; }
+  .um-acts { white-space: normal; min-width: 180px; }   /* action links wrap instead of widening the table */
+  .um-acts .um-a { display: inline-block; margin-bottom: 4px; }
   .um-off td { opacity: .6; }
   .um-access summary { cursor: pointer; font-size: .85rem; }
   .um-access .perm-list { margin-top: 6px; }
@@ -2943,7 +2944,7 @@ function fitToScreen() {
   const key = `${innerWidth}x${innerHeight}|${metricsVersion}`;
   if (zoomCache.key !== key) { main.style.zoom = 1; zoomCache = { key, z: metricsZoom(main) }; }   // the expensive part, only when needed
   const z = zoomCache.z;
-  if (currentView === "metrics") { main.style.zoom = z; return; }
+  if (currentView === "metrics" || currentView === "users") { main.style.zoom = z; return; }   // Users always stays normal size
   // Queue / Team: same size as Metrics; only shrink if a table would need sideways scrolling
   const wrap = document.querySelector(`#view-${currentView} .table-wrap`);
   const fits = t => {
