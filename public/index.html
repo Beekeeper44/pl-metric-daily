@@ -935,6 +935,34 @@ function save() { try { localStorage.setItem(STORE, JSON.stringify(saved)); } ca
 const saved = Object.assign({ targets: {}, start: CONFIG.start, end: CONFIG.end }, loadSaved());
 delete saved.totalTarget;   // old manual total override is no longer used
 const targetFor = c => (c.key in saved.targets ? saved.targets[c.key] : c.target);
+/* Shared targets + dates (Neon, /api/settings): same for everyone, checked every 30 s.
+   This browser's copy is only a fallback for the demo / file preview. */
+let sharedOk = false, sharedTimer = null;
+const editingTargets = () => document.activeElement && document.activeElement.matches(".target, #start, #end");
+async function loadShared() {
+  if (!me || editingTargets()) return;
+  let d; try { d = await api("/api/settings"); } catch { return; }
+  sharedOk = true;
+  const first = !d.updatedAt;                // nothing shared yet → seed it from this browser so nobody loses their targets
+  if (first) { if (can("targets") && (Object.keys(saved.targets).length || saved.start || saved.end)) pushShared({ set: { ...saved.targets }, start: saved.start || "", end: saved.end || "" }); return; }
+  const datesChanged = (d.start || "") !== (saved.start || "") || (d.end || "") !== (saved.end || "");
+  const changed = datesChanged || JSON.stringify(d.targets) !== JSON.stringify(saved.targets);
+  if (!changed) return;
+  saved.targets = { ...d.targets }; saved.start = d.start || ""; saved.end = d.end || ""; save();
+  $("start").value = saved.start; $("end").value = saved.end;
+  render();
+  if (datesChanged) scheduleRangeFetch();
+}
+async function pushShared(change) {
+  if (!me) return;                           // demo / file preview: this browser only
+  try { const d = await post("/api/settings", change); saved.targets = { ...d.targets }; saved.start = d.start || ""; saved.end = d.end || ""; save(); }
+  catch (e) { toast(`Couldn’t save for everyone: ${esc(e.message)}`, "bad"); }
+}
+function startShared() {
+  loadShared();
+  clearInterval(sharedTimer); sharedTimer = setInterval(loadShared, 30000);
+}
+addEventListener("focus", () => loadShared());
 
 let activeTile = null;
 let owner = "all", type = "all", prio = "all", need = "review", query = "", sortKey = "days", sortDir = -1;
@@ -2643,6 +2671,7 @@ function startApp(user) {
   $("me").hidden = !user;
   if (user) $("me-name").textContent = user.name || user.email;
   applyPerms();
+  if (user) startShared();
   if (!booted) { booted = true; load(); setInterval(load, CONFIG.refreshMinutes * 60000); }
   else load();
   setView(location.hash.slice(1));
@@ -3012,6 +3041,7 @@ $("segments").addEventListener("click", e => {
 $("search").addEventListener("input", e => { query = e.target.value; render(); });
 $("start").value = saved.start || ""; $("end").value = saved.end || "";
 ["start", "end"].forEach(id => ["input", "change"].forEach(ev => $(id).addEventListener(ev, e => {
+  if (ev === "change" && can("targets")) pushShared({ [id]: e.target.value });   // share once the date is picked
   if (saved[id] === e.target.value) return;
   saved[id] = e.target.value; save();
   render();                       // instant: duration, pace, statuses
@@ -3026,6 +3056,7 @@ $("tiles").addEventListener("change", e => {
   if (!can("targets")) return render();
   const key = e.target.dataset.key; if (!key) return;
   saved.targets[key] = readTarget(e.target.value); save(); render();
+  pushShared({ set: { [key]: saved.targets[key] } });
 });
 $("tiles").addEventListener("click", e => {
   if (e.target.closest("input, .reset")) return;
@@ -3039,6 +3070,7 @@ $("tiles").addEventListener("click", e => {
 $("tiles").addEventListener("click", e => {
   const key = e.target.dataset.reset; if (!key) return;
   delete saved.targets[key]; save(); render();
+  pushShared({ reset: [key] });
 });
 $("tiles").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches(".target")) e.target.blur(); });
 
