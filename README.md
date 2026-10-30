@@ -89,7 +89,7 @@ The Metrics view scales itself to fill the monitor exactly (no scrolling, no emp
 - **Oregon Team** from **Metabase 46168** (USER_ID · FULL_NAME · ROLE · EMAIL · LAST_ACTIVITY_PT · TASKS_LAST_14D):
   name, role, "active Xm ago" (green + pulsing dot under 5 minutes, Pacific time, refreshes every minute) and Tasks Last 14 Days.
 - **PL Team** — built-in roster (`PL_ROSTER` in index.html, 129 people from the Team Leveling list): Name · Dept · Title · Tier · Reports to,
-  with Dept filter pills (Lead, CS, Review, Data, Items, Grading, Recomp, Community) and counts. Search covers name, title, dept, tier and reports-to.
+  with Dept filter pills (Lead, CS, Review, Data, Items, Grading, Recomp, Community) and counts. Search matches the Name column only.
 - **Fold teams from the logo:** click a team's logo (top right of each card) to collapse/expand Director, Oregon or PL. Closing PL also closes every group inside it (in all Group by views), so it reopens as a tidy list of group headers — open the ones you want or use expand all. Open teams have a neon-green glowing logo; folded ones show their head-count. Remembered in this browser.
 - Selected filter/group pills on the Team tab are neon green.
 - **PL grouping:** Group by **Dept** (default) · **Reports to** (each manager with their people, Karl → Marco / Ehm / Peds / Jensen) · **Tier** · **No groups**.

@@ -1886,7 +1886,7 @@ function renderLeaderboard() {
   $("lb-metrics").innerHTML = TEAM_SIMPLE ? "" : sh.nums.map(k => `<button data-lbm="${esc(k)}" aria-pressed="${k === lbMetric}">${esc(prettyCol(k))}</button>`).join("");
   const ql = lbQuery.toLowerCase();
   const exactName = ql && people.some(p => p.name.toLowerCase() === ql.trim());   // a picked name shows just that person
-  const match = p => !ql || exactName ? !ql || p.name.toLowerCase() === ql.trim() : `${p.name} ${p.role} ${p.email} ${p.dept || ""} ${p.tier || ""} ${p.reports || ""}`.toLowerCase().includes(ql);
+  const match = p => !ql || (exactName ? p.name.toLowerCase() === ql.trim() : p.name.toLowerCase().includes(ql.trim()));   // Name column only
   const shown = people.filter(p => match(p) && !p.hidden);
   $("lb-count").textContent = `${shown.length} ${shown.length === 1 ? "person" : "people"}`;
   $("lb-grid").innerHTML = TEAM_ORDER.map(t => {
