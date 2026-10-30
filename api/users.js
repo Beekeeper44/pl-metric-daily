@@ -6,10 +6,11 @@
 // POST /api/users { action: "remove", id }
 // POST /api/users { action: "cancel", inviteId }
 // POST /api/users { action: "perms",  id, perms: ["metrics","queue","team","targets","refresh"] }   (Members)
+// POST /api/users { action: "setpass", email, password }   (admin sets a password — works for invited people too)
 // POST /api/users { action: "off" | "on", id }   (turn an account off / back on; off signs them out right away)
 import { q } from "../lib/db.js";
 import { send, body, origin } from "../lib/http.js";
-import { currentUser, newToken, tokenHash, normEmail, validEmail, ROLES, PERMS, DEFAULT_PERMS, cleanPerms, permsOf } from "../lib/auth.js";
+import { currentUser, newToken, tokenHash, normEmail, validEmail, hashPassword, ROLES, PERMS, DEFAULT_PERMS, cleanPerms, permsOf } from "../lib/auth.js";
 
 const LINK_DAYS = 7;
 
@@ -60,6 +61,21 @@ export default async function handler(req, res) {
         || (await q("SELECT email, name, role, perms FROM pmd_invites WHERE email = $1 ORDER BY created_at DESC LIMIT 1", [email]))[0];
       if (!u) return send(res, 404, { error: "No one with that email." });
       return send(res, 200, { link: await makeLink(req, u.email, u.name, u.role, me.email, u.perms || ""), days: LINK_DAYS });
+    }
+    if (b.action === "setpass") {
+      const email = normEmail(b.email), password = String(b.password || "");
+      if (password.length < 10) return send(res, 400, { error: "Password must be at least 10 characters." });
+      const pass = hashPassword(password);
+      const u = (await q("SELECT id FROM pmd_users WHERE email = $1", [email]))[0];
+      if (u) {   // existing account → new password, signs them out everywhere
+        await q("UPDATE pmd_users SET pass_hash = $1, session_v = session_v + 1 WHERE id = $2", [pass, u.id]);
+      } else {   // invited only → create the account from their invite
+        const inv = (await q("SELECT id, name, role, perms FROM pmd_invites WHERE email = $1 AND used_at IS NULL ORDER BY created_at DESC LIMIT 1", [email]))[0];
+        if (!inv) return send(res, 404, { error: "No one with that email — add them first." });
+        await q("INSERT INTO pmd_users (email, name, role, perms, pass_hash) VALUES ($1, $2, $3, $4, $5)", [email, inv.name || email, inv.role, inv.perms || "", pass]);
+        await q("UPDATE pmd_invites SET used_at = now() WHERE email = $1 AND used_at IS NULL", [email]);
+      }
+      return send(res, 200, { ok: true });
     }
     if (b.action === "role") {
       if (!ROLES.includes(b.role)) return send(res, 400, { error: "Unknown role." });

@@ -2818,7 +2818,7 @@ async function loadUsers() {
         <td class="um-dim">${when(u.last_login)}</td>
         <td class="um-acts">${u.id === d.me ? `<span class="um-dim">you</span>` : u.disabled
           ? `<a class="um-a" data-on="${u.id}">turn on</a> <a class="um-a um-danger" data-remove="${u.id}" data-who="${esc(u.name || u.email)}">delete</a>`
-          : `<a class="um-a" data-link="${esc(u.email)}" data-name="${esc(u.name)}">reset password link</a> <a class="um-a" data-off="${u.id}" data-who="${esc(u.name || u.email)}">turn off</a>`}</td>
+          : `<a class="um-a" data-link="${esc(u.email)}" data-name="${esc(u.name)}">reset password link</a> <a class="um-a" data-setpass="${esc(u.email)}" data-who="${esc(u.name || u.email)}">set password</a> <a class="um-a" data-off="${u.id}" data-who="${esc(u.name || u.email)}">turn off</a>`}</td>
       </tr>` })),
       ...d.invites.map(i => ({ kind: "invite", sortName: (i.name || i.email).toLowerCase(), html: `<tr>
         <td><b>${esc(i.name || "—")}</b><div class="um-dim">${esc(i.email)}</div></td>
@@ -2826,7 +2826,7 @@ async function loadUsers() {
         <td>${i.role === "admin" ? `<span class="um-green">everything + users</span>` : `<span class="um-dim">${(() => { const ps = (i.perms || "").split(",").filter(p => PERM_LABELS[p]); return !i.perms || ps.length === 5 ? "full access" : ps.length ? esc(ps.map(p => PERM_LABELS[p]).join(" · ")) : "no access"; })()}</span>`}</td>
         <td><span class="um-orange">invited</span></td>
         <td class="um-dim">—</td>
-        <td class="um-acts"><a class="um-a" data-link="${esc(i.email)}" data-name="${esc(i.name)}">new invite link</a> <a class="um-a" data-cancel="${i.id}">cancel</a></td>
+        <td class="um-acts"><a class="um-a" data-setpass="${esc(i.email)}" data-who="${esc(i.name || i.email)}">set password</a> <a class="um-a" data-link="${esc(i.email)}" data-name="${esc(i.name)}">new invite link</a> <a class="um-a" data-cancel="${i.id}">cancel</a></td>
       </tr>` })),
     ].sort((x, y) => x.sortName.localeCompare(y.sortName));
     $("users-body").innerHTML = people.map(x => x.html).join("") || `<tr><td colspan="6">No one yet.</td></tr>`;
@@ -2859,9 +2859,20 @@ $("invite-form").addEventListener("submit", async e => {
   } catch (err) { umMsg(err.message, false); }
 });
 $("view-users").addEventListener("click", async e => {
-  const a = e.target.closest("[data-link],[data-off],[data-on],[data-remove],[data-cancel]"); if (!a) return;
+  const a = e.target.closest("[data-link],[data-off],[data-on],[data-remove],[data-cancel],[data-setpass]"); if (!a) return;
   e.preventDefault();
   try {
+    if (a.dataset.setpass) {
+      // suggest a readable random password; the admin can change it before saving
+      const abc = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", rnd = new Uint32Array(14); crypto.getRandomValues(rnd);
+      const pw = prompt(`Password for ${a.dataset.who} (10+ characters). Send it to them privately — they can change it under “Your password” after signing in.`, [...rnd].map(n => abc[n % abc.length]).join(""));
+      if (pw === null) return;
+      if (pw.length < 10) return umMsg("Password must be at least 10 characters.", false);
+      await post("/api/users", { action: "setpass", email: a.dataset.setpass, password: pw });
+      const copied = await copyText(`PL Metric Daily — ${location.origin}\nEmail: ${a.dataset.setpass}\nPassword: ${pw}`);
+      umMsg(`Password set for ${a.dataset.who} — they can sign in now with ${a.dataset.setpass}.${copied ? " Sign-in details copied to your clipboard." : ""}`, true);
+      return loadUsers();
+    }
     if (a.dataset.link) {
       const r = await post("/api/users", { action: "link", email: a.dataset.link });
       showLink(r.link, a.dataset.link, a.dataset.name || "", r.days, a.textContent);

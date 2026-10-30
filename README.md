@@ -21,6 +21,7 @@ Vercel app: static page (`public/index.html`) + one serverless function (`api/me
   - off → **turn on**, **delete**
   - invited → **new invite link**, **cancel**
   - Members' access can be narrowed: click their access text → tick Metrics / Queue / Team / Edit targets & dates / Refresh Metabase.
+- **set password** (on any row, invited or active): type or keep the suggested password → the account is ready right away (an invited person's account is created from their invite) and the sign-in details are copied for you to send privately. Setting a password signs that person out everywhere. They can change it under Your password.
 - **Your password**: current + new (10+ characters) → **Change password** (other devices are signed out).
 - **Add from the team list** (collapsed at the bottom): tick people from Metabase 46168 and create their links in one go.
 - At least one admin always stays; you can't turn yourself off.
