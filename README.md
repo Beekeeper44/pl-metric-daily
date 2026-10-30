@@ -39,7 +39,7 @@ Vercel app: static page (`public/index.html`) + one serverless function (`api/me
 - An order is complete when EV is done ($ column) or it has the ✅. Change with `RULES.completeWhen` ("either", "check", "ev"). Not complete = in the queue.
 - Targets: type them on the page (each tile and the total). Defaults: AC slabs 5,000 · AC raw 800 · Customer raw 400 · Customer slabs blank. Total target = sum of the tile targets (not editable). Targets and dates are saved in this browser.
 
-If the API is unavailable the page falls back to labeled demo data; use **Load CSV** to load a Metabase CSV export instead. Add `?demo` to the URL to force demo data.
+If the API is unavailable the page falls back to labeled demo data; use **Load CSV** to load a Metabase CSV export instead. Add `?demo` to the URL to force demo data. Opened anywhere without the API (local file, Claude artifact), the page goes straight to the demo preview instead of the sign-in screen.
 
 ## Tile sources (first available wins)
 1. Metabase **46135** — rows of METRIC · CURRENT_TOTAL:
@@ -108,6 +108,9 @@ The Metrics view scales itself to fill the monitor exactly (no scrolling, no emp
   in that group have that option set up. Click one → confirm → everyone in the group switches to **their own** saved option (skills + "active" mark saved);
   people without it are skipped. A green bar shows the result with **⇪ Push N to admin** to write all of their changes to Arena admin in one go.
   The pill fills in when everyone who has it set up is on it.
+- **Name search:** type in the Team search box and it fills in the first matching name (the rest is selected, so you can keep typing). A list of matches drops down — ↑/↓ to move, **Enter** or **Tab** to pick, Esc to close. Picking a name shows just that person; **Enter** again opens their window.
+- **1st / 2nd / 3rd on every row** (admins): small gold / silver / copper pills next to ✎ Edit, with the skill count once set up. Click one → that person switches to that option (skills saved, then open them and ⇪ Push to write it to admin). Dashed = not set up yet → clicking opens their window in setup mode for that option.
+- **Copy skills → save as an option:** after ⧉ Copy skills on anyone, every person window shows **⇩ <Name>’s skills as 1st · 2nd · 3rd** — click one to save the copied ON skills as that option (asks before replacing one that's already set up). While setting up an option, **Paste <Name>’s skills** picks the copied ON skills.
 - **⧉ Copy skills / ⇩ Paste** (person window): Copy takes that person's on, off and not-set skills (and puts a readable On / Off list on the clipboard for Slack).
   Open someone else → **Paste from <name>** (shows how many on / off) gives them exactly the same skills and saves right away (in edit mode it waits for Save).
   The copy is remembered in this browser until you copy someone else.

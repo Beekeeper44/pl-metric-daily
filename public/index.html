@@ -174,7 +174,22 @@
   .opt-edit { --oc: #e3b341; height: 34px; line-height: 1; padding: 0 11px; border-radius: 0 999px 999px 0; border: 1.5px solid var(--line); border-left: 0; background: var(--bg); color: var(--ink); font: 800 .85rem var(--font-body); cursor: pointer; }
   .opt-edit:hover { color: #39ff14; border-color: #39ff14; }
   .opt-name { padding: 1px 10px; border-radius: 999px; background: var(--oc); color: #14100a; }
-  .pm-copy { display: flex; gap: 8px; }
+  .pm-copy { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  /* row option pills (Team tab rows) + paste-as-option pills (person window) */
+  .row-opts { display: inline-flex; gap: 5px; margin-left: 8px; }
+  .opt.mini { height: 24px; padding: 0 9px; gap: 5px; border-radius: 999px; font-size: .74rem; }
+  .opt.mini b { font-size: .66rem; padding: 0 5px; }
+  .opt.mini:hover { box-shadow: 0 0 0 2px #39ff14; }
+  .paste-as { display: inline-flex; align-items: center; gap: 5px; font: 700 .8rem var(--font-body); color: var(--muted, #8b98a5); }
+  /* name search typeahead */
+  .ta-wrap { position: relative; margin-left: auto; }
+  .ta-wrap .search { margin-left: 0; }
+  .ta-list { position: absolute; top: calc(100% + 4px); right: 0; min-width: 100%; width: max-content; max-width: 420px; z-index: 30; margin: 0; padding: 4px; list-style: none;
+    background: var(--surface); border: 1px solid #39ff14; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+  .ta-list li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+  .ta-list li.on, .ta-list li:hover { background: color-mix(in srgb, #39ff14 16%, transparent); }
+  .ta-list li mark { background: none; color: #39ff14; font-weight: 800; }
+  .ta-list li small { margin-left: auto; opacity: .7; font-size: .78rem; }
   .cp-btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: 999px; border: 1.5px solid #7cf0ff;
     background: color-mix(in srgb, #7cf0ff 10%, transparent); color: var(--ink); font: 800 .9rem var(--font-body); cursor: pointer; }
   .cp-btn:hover { background: #7cf0ff; color: #04222a; }
@@ -624,6 +639,7 @@
     .tiles { grid-template-columns: 1fr; }
     .timeline { grid-template-columns: repeat(2, auto); }
     .search { margin-left: 0; width: 100%; }
+    .ta-wrap { margin-left: 0; width: 100%; }
   }
 </style>
 </head>
@@ -777,7 +793,8 @@
       <h2 id="team-h">Team</h2>
       <span class="count" id="lb-count"></span>
       <div class="pills" id="lb-metrics" aria-label="Rank by"></div>
-      <input class="search" id="lb-search" type="search" placeholder="Search names" aria-label="Search names">
+      <div class="ta-wrap"><input class="search" id="lb-search" type="search" placeholder="Search names" aria-label="Search names" autocomplete="off"
+        role="combobox" aria-autocomplete="both" aria-controls="lb-suggest" aria-expanded="false"><ul class="ta-list" id="lb-suggest" role="listbox" hidden></ul></div>
       <button type="button" class="edit-team" id="lb-edit" hidden>Edit team</button>
     </div>
     <p class="lb-note" id="lb-note"></p>
@@ -1801,12 +1818,42 @@ function plRow(p, admin, i = 0) {
   const open = admin && editingTeam;
   return `<tr class="${p.hidden ? "is-hidden" : ""}${open ? " open" : ""}" data-drag-key="${esc(p.key)}" ${admin && !p.hidden ? 'draggable="true"' : ""}>
     ${admin ? `<td class="ord-cell">${ordCell(p, i, admin)}</td>` : ""}
-    <td class="pl-name"><button class="tm-link" data-person="${esc(p.key)}" title="Open">${esc(p.name)}</button>${canEditTeam() ? `<button class="row-edit" data-person-edit="${esc(p.key)}" title="Edit ${esc(p.name)}" aria-label="Edit ${esc(p.name)}">✎ Edit</button>` : ""}</td>
+    <td class="pl-name"><button class="tm-link" data-person="${esc(p.key)}" title="Open">${esc(p.name)}</button>${canEditTeam() ? `<button class="row-edit" data-person-edit="${esc(p.key)}" title="Edit ${esc(p.name)}" aria-label="Edit ${esc(p.name)}">✎ Edit</button>` : ""}${rowOpts(p)}</td>
     <td>${p.dept ? `<span class="dept d-${slug(p.dept)}">${esc(p.dept)}</span>` : ""}</td>
     <td>${esc(p.role || "")}</td>
     <td>${p.tier ? `<span class="tier t-${slug(p.tier)}">${esc(p.tier)}</span>` : ""}</td>
     <td class="pl-rep">${esc(p.reports || "")}</td>
   </tr>${open ? `<tr class="open"><td colspan="${admin ? 6 : 5}">${editRow(p)}</td></tr>` : ""}`;
+}
+/* 1st / 2nd / 3rd Option pills on each row: set up → click switches the person to it; not set up → opens their window to set it up */
+function rowOpts(p) {
+  if (!canEditTeam()) return "";
+  return `<span class="row-opts">${OPTS.map(([n, l]) => {
+    const list = p.presets?.opts?.[n] || [], active = p.presets?.active === n;
+    return `<button type="button" class="opt mini opt-${n}${active ? " active" : ""}${list.length ? "" : " opt-empty"}" data-row-opt="${n}" data-key="${esc(p.key)}"
+      title="${list.length ? `${l}: ${list.length} skills — click to switch ${esc(p.name)} to it` : `${l} isn’t set up for ${esc(p.name)} — click to set it up`}">${n === "1" ? "1st" : n === "2" ? "2nd" : "3rd"}${list.length ? `<b>${list.length}</b>` : ""}</button>`;
+  }).join("")}</span>`;
+}
+async function applyRowOption(key, n) {
+  const p = lastPeople[key]; if (!p) return;
+  const list = p.presets?.opts?.[n] || [], label = OPTS.find(o => o[0] === n)[1];
+  if (!list.length) {                       // not set up yet → open the window in setup mode for that option
+    openPerson(key);
+    pmSetup = n; pmSetupSel = new Set(SKILLS.filter(k => pmSkills[k] === true));
+    updatePmSkills(); return requestAnimationFrame(fitPm);
+  }
+  if (p.presets?.active === n) return toast(`${esc(p.name)} is already on their <b>${label}</b>.`, "ok", 3000);
+  if (!me) return toast("Sign in on the live site to save.", "bad");
+  const skills = Object.fromEntries(SKILLS.map(k => [k, list.includes(k)]));
+  const presets = { ...p.presets, opts: { ...p.presets.opts }, active: n };
+  try {
+    await post("/api/team", { action: "skills", key, skills });
+    await post("/api/team", { action: "presets", key, presets });
+    p.skills = skills; p.presets = presets;
+    teamEdits[key] = { ...(teamEdits[key] || { key }), skills: JSON.stringify(skills), presets: JSON.stringify(presets) };
+    renderLeaderboard();
+    toast(`${esc(p.name)} → <b>${label}</b> (${list.length} skills on). Open them and press ⇪ Push to write it to admin.`, "ok");
+  } catch (err) { toast(esc(err.message), "bad"); }
 }
 const ordCell = (p, i, admin) => admin && !p.hidden ? `<span class="ord"><span class="grip" aria-hidden="true" title="Drag to move">⠿</span>
   <input class="ord-num" type="text" inputmode="numeric" value="${i + 1}" data-ord-key="${esc(p.key)}" aria-label="Position of ${esc(p.name)}"></span>` : "";
@@ -1818,7 +1865,7 @@ function simpleRow(p, admin, i = 0) {
   return `<li class="tm-row${p.hidden ? " is-hidden" : ""}${open ? " open" : ""}${admin ? " can-drag" : ""}" data-drag-key="${esc(p.key)}" ${admin && !p.hidden ? 'draggable="true"' : ""}>
     ${ordCell(p, i, admin)}
     <div class="tm-who">
-      <div class="tm-name"><button class="tm-link" data-person="${esc(p.key)}" title="Open">${esc(p.name)}</button>${canEditTeam() ? `<button class="row-edit" data-person-edit="${esc(p.key)}" title="Edit ${esc(p.name)}" aria-label="Edit ${esc(p.name)}">✎ Edit</button>` : ""}</div>
+      <div class="tm-name"><button class="tm-link" data-person="${esc(p.key)}" title="Open">${esc(p.name)}</button>${canEditTeam() ? `<button class="row-edit" data-person-edit="${esc(p.key)}" title="Edit ${esc(p.name)}" aria-label="Edit ${esc(p.name)}">✎ Edit</button>` : ""}${rowOpts(p)}</div>
       <div class="tm-role">${esc(p.role || "")}</div>
     </div>
     <div class="tm-seen${live ? " live" : ""}">${p.seen ? `${live ? `<span class="live-dot" aria-hidden="true"></span>` : ""}${esc(ago(p.seen))}` : ""}</div>
@@ -1838,7 +1885,8 @@ function renderLeaderboard() {
   note.textContent = teamErr ? `Last refresh failed (${teamErr}) — showing earlier list.` : (demoMode || forcedDemo ? "Demo copy of Metabase 46168 — edits save once you’re live." : "");
   $("lb-metrics").innerHTML = TEAM_SIMPLE ? "" : sh.nums.map(k => `<button data-lbm="${esc(k)}" aria-pressed="${k === lbMetric}">${esc(prettyCol(k))}</button>`).join("");
   const ql = lbQuery.toLowerCase();
-  const match = p => !ql || `${p.name} ${p.role} ${p.email} ${p.dept || ""} ${p.tier || ""} ${p.reports || ""}`.toLowerCase().includes(ql);
+  const exactName = ql && people.some(p => p.name.toLowerCase() === ql.trim());   // a picked name shows just that person
+  const match = p => !ql || exactName ? !ql || p.name.toLowerCase() === ql.trim() : `${p.name} ${p.role} ${p.email} ${p.dept || ""} ${p.tier || ""} ${p.reports || ""}`.toLowerCase().includes(ql);
   const shown = people.filter(p => match(p) && !p.hidden);
   $("lb-count").textContent = `${shown.length} ${shown.length === 1 ? "person" : "people"}`;
   $("lb-grid").innerHTML = TEAM_ORDER.map(t => {
@@ -2032,7 +2080,72 @@ function renderPLCard(list, admin, def) {
 }
 setInterval(() => { if (currentView === "team" && !editingTeam && !editingKey) renderLeaderboard(); }, 60000);
 $("lb-metrics").addEventListener("click", e => { const b = e.target.closest("[data-lbm]"); if (b) { lbMetric = b.dataset.lbm; renderLeaderboard(); } });
-$("lb-search").addEventListener("input", e => { lbQuery = e.target.value; renderLeaderboard(); });
+/* ---- Name search: type and it fills in the first matching name (selected, so typing keeps going); list of matches below ---- */
+let taItems = [], taIdx = -1;
+const taEl = () => $("lb-suggest");
+function taMatches(q) {
+  const ql = q.trim().toLowerCase(); if (!ql) return [];
+  const seen = new Set(), out = [];
+  teamPeople().people.filter(p => !p.hidden).forEach(p => {
+    const n = p.name.toLowerCase(); if (seen.has(n)) return;
+    const rank = n.startsWith(ql) ? 0 : n.split(/\s+/).some(w => w.startsWith(ql)) ? 1 : n.includes(ql) ? 2 : -1;
+    if (rank >= 0) { seen.add(n); out.push({ p, rank }); }
+  });
+  return out.sort((a, b) => a.rank - b.rank || a.p.name.localeCompare(b.p.name)).slice(0, 8).map(x => x.p);
+}
+function taRender(q) {
+  const ul = taEl(), inp = $("lb-search");
+  taItems = taMatches(q); taIdx = taItems.length ? 0 : -1;
+  if (!taItems.length || (taItems.length === 1 && taItems[0].name.toLowerCase() === q.trim().toLowerCase())) { ul.hidden = true; inp.setAttribute("aria-expanded", "false"); return; }
+  const ql = q.trim().toLowerCase();
+  ul.innerHTML = taItems.map((p, i) => {
+    const at = p.name.toLowerCase().indexOf(ql);
+    const nm = at < 0 ? esc(p.name) : esc(p.name.slice(0, at)) + `<mark>${esc(p.name.slice(at, at + ql.length))}</mark>` + esc(p.name.slice(at + ql.length));
+    const tag = p.dept ? `<span class="dept d-${slug(p.dept)}">${esc(p.dept)}</span>` : "";
+    return `<li role="option" data-ta="${i}" class="${i === taIdx ? "on" : ""}"><span>${nm}</span>${tag}<small>${esc(p.role || TEAM_DEFS[p.team]?.label || "")}</small></li>`;
+  }).join("");
+  ul.hidden = false; inp.setAttribute("aria-expanded", "true");
+}
+function taPick(i) {
+  const p = taItems[i]; if (!p) return;
+  const inp = $("lb-search");
+  inp.value = lbQuery = p.name;
+  taEl().hidden = true; inp.setAttribute("aria-expanded", "false");
+  renderLeaderboard();
+}
+function taMove(d) {
+  if (taEl().hidden || !taItems.length) return;
+  taIdx = (taIdx + d + taItems.length) % taItems.length;
+  taEl().querySelectorAll("li").forEach((li, i) => li.classList.toggle("on", i === taIdx));
+}
+$("lb-search").addEventListener("input", e => {
+  const inp = e.target, typed = inp.value;
+  lbQuery = typed;                                     // the list filters on what was typed, not the filled-in part
+  taRender(typed);
+  // fill in the rest of the first name that starts with what was typed (only while adding letters)
+  if (e.inputType && e.inputType.startsWith("insert") && typed.trim() && inp.selectionStart === typed.length) {
+    const first = taItems.find(p => p.name.toLowerCase().startsWith(typed.toLowerCase()));
+    if (first && first.name.length > typed.length) { inp.value = typed + first.name.slice(typed.length); inp.setSelectionRange(typed.length, inp.value.length); }
+  }
+  renderLeaderboard();
+});
+$("lb-search").addEventListener("keydown", e => {
+  const inp = e.target, filled = inp.selectionStart < inp.selectionEnd && inp.selectionEnd === inp.value.length;
+  if (e.key === "ArrowDown") { e.preventDefault(); return taMove(1); }
+  if (e.key === "ArrowUp") { e.preventDefault(); return taMove(-1); }
+  if (e.key === "Enter" || (e.key === "Tab" && (filled || !taEl().hidden))) {
+    if (!taEl().hidden && taIdx >= 0) { e.preventDefault(); return taPick(taIdx); }
+    if (filled) { e.preventDefault(); inp.setSelectionRange(inp.value.length, inp.value.length); lbQuery = inp.value; renderLeaderboard(); return; }
+    if (e.key === "Enter") {                            // full name already in the box → open that person
+      const p = teamPeople().people.find(x => !x.hidden && x.name.toLowerCase() === inp.value.trim().toLowerCase());
+      if (p) { e.preventDefault(); openPerson(p.key); }
+    }
+  }
+  if (e.key === "Escape") { if (!taEl().hidden) { e.preventDefault(); taEl().hidden = true; inp.setAttribute("aria-expanded", "false"); } }
+});
+$("lb-search").addEventListener("blur", () => setTimeout(() => { taEl().hidden = true; $("lb-search").setAttribute("aria-expanded", "false"); }, 150));
+$("lb-search").addEventListener("search", e => { if (!e.target.value) { lbQuery = ""; taEl().hidden = true; renderLeaderboard(); } });
+taEl().addEventListener("mousedown", e => { const li = e.target.closest("[data-ta]"); if (li) { e.preventDefault(); taPick(Number(li.dataset.ta)); } });
 $("lb-edit").addEventListener("click", () => { editingTeam = !editingTeam; renderLeaderboard(); });
 $("view-team").addEventListener("click", async e => {
   const go = e.target.closest("[data-grp-opt]");
@@ -2070,6 +2183,8 @@ $("view-team").addEventListener("click", async e => {
   }
   const dp = e.target.closest("[data-pl-dept]");
   if (dp) { plDept = dp.dataset.plDept; return renderLeaderboard(); }
+  const ro = e.target.closest("[data-row-opt]");
+  if (ro) { e.stopPropagation(); return applyRowOption(ro.dataset.key, ro.dataset.rowOpt); }
   const pe = e.target.closest("[data-person-edit]");
   if (pe && !canEditTeam()) return openPerson(pe.dataset.personEdit);
   if (pe) return openPerson(pe.dataset.personEdit, true);
@@ -2268,7 +2383,20 @@ function renderPmCopy() {
   const canPaste = copiedSkills && copiedSkills.key !== pmKey;
   box.innerHTML = `<button type="button" class="cp-btn" data-copy-skills="1" title="Copy ${esc(p.name || "")}’s on / off / not-set skills">⧉ Copy skills</button>
     ${canPaste ? `<button type="button" class="cp-btn paste" data-paste-skills="1" title="Give ${esc(p.name || "")} exactly ${esc(copiedSkills.name)}’s skills">⇩ Paste from ${esc(copiedSkills.name.split(" ")[0])}
-      <b>${copiedSkills.on}</b><i>${copiedSkills.off}</i></button>` : ""}`;
+      <b>${copiedSkills.on}</b><i>${copiedSkills.off}</i></button>` : ""}
+    ${copiedSkills ? `<span class="paste-as" title="Save ${esc(copiedSkills.name)}’s ${copiedSkills.on} ON skills as one of ${esc(p.name || "")}’s options">⇩ ${copiedSkills.key === pmKey ? "Copied" : esc(copiedSkills.name.split(" ")[0]) + "’s"} skills as
+      ${OPTS.map(([n]) => `<button type="button" class="opt mini opt-${n}" data-paste-opt="${n}">${n === "1" ? "1st" : n === "2" ? "2nd" : "3rd"}</button>`).join("")}</span>` : ""}`;
+}
+async function pasteAsOption(n) {
+  if (!copiedSkills) return;
+  const label = OPTS.find(o => o[0] === n)[1], list = SKILLS.filter(k => copiedSkills.skills[k] === true);
+  const had = (pmPresets.opts[n] || []).length;
+  if (had && !confirm(`Replace ${label} (${had} skills) with ${copiedSkills.name}’s ${list.length} ON skills?`)) return;
+  pmPresets.opts[n] = list;
+  if (pmPresets.active === n) pmPresets.active = null;   // the option changed, so it's no longer what they have on
+  pmSetup = null; updatePmSkills();
+  try { await savePresets(); renderLeaderboard(); flashPm(`${label} = ${copiedSkills.name}’s ${list.length} skills — click ${label} to switch to it`, true); }
+  catch (err) { flashPm(err.message, false); }
 }
 async function copySkills() {
   const p = lastPeople[pmKey];
@@ -2306,6 +2434,7 @@ function renderPmOpts() {
     bar.hidden = false;
     bar.innerHTML = `<span>Setting up <b class="opt-name opt-${pmSetup}">${label}</b> — click skills to include them (<b>${pmSetupSel.size}</b> picked).</span>
       <span class="spacer"></span><button type="button" class="row-btn" data-opt-copy="1">Copy current skills</button>
+      ${copiedSkills ? `<button type="button" class="row-btn" data-opt-paste="1" title="Pick ${esc(copiedSkills.name)}’s ON skills">Paste ${esc(copiedSkills.name.split(" ")[0])}’s skills</button>` : ""}
       <button type="button" class="row-btn" data-opt-clear="1">Clear</button><button type="button" class="row-btn" data-opt-cancel="1">Cancel</button>
       <button type="button" class="primary" data-opt-save="1">Save option</button>`;
   } else { bar.hidden = true; bar.innerHTML = ""; }
@@ -2386,6 +2515,9 @@ $("person-modal").addEventListener("click", async e => {
   if (e.target === $("person-modal")) return $("person-modal").close();       // click outside
   if (e.target.closest("[data-copy-skills]")) return copySkills();
   if (e.target.closest("[data-paste-skills]")) return pasteSkills();
+  const po = e.target.closest("[data-paste-opt]");
+  if (po) return pasteAsOption(po.dataset.pasteOpt);
+  if (e.target.closest("[data-opt-paste]")) { pmSetupSel = new Set(SKILLS.filter(k => copiedSkills?.skills[k] === true)); return updatePmSkills(); }
   // --- option pills ---
   const ob = e.target.closest("[data-opt]");
   if (ob && canEditTeam()) {
@@ -2499,6 +2631,7 @@ async function boot() {
     if (!e.status || e.status === 404) return startApp(null);
     return showGate("error", e.message);              // e.g. DATABASE_URL / SESSION_SECRET missing
   }
+  if (!s || typeof s.needsSetup !== "boolean") return startApp(null);   // no real API (e.g. hosted artifact) → demo preview
   if (s.needsSetup) return showGate("setup", s.setupEnabled);
   if (!s.user) return showGate("login");
   startApp(s.user);
