@@ -39,6 +39,14 @@ export default async function handler(req, res) {
       if (await tooManyAttempts(email)) return send(res, 429, { error: "Too many tries. Wait 15 minutes and try again." });
       const rows = await q("SELECT id, email, name, role, perms, pass_hash, session_v, disabled FROM pmd_users WHERE email = $1", [email]);
       const u = rows[0];
+      if (!u) {
+        // invited but never opened the link → say so instead of "wrong password"
+        const inv = await q("SELECT 1 FROM pmd_invites WHERE email = $1 AND used_at IS NULL", [email]);
+        if (inv.length) {
+          await noteFailedAttempt(email);
+          return send(res, 401, { error: "You haven’t set a password yet. Open the invite link an admin sent you and create one there. No link, or it expired? Ask an admin for a new invite link." });
+        }
+      }
       if (!u || !checkPassword(b.password, u.pass_hash)) {
         await noteFailedAttempt(email);
         return send(res, 401, { error: "Wrong email or password." });

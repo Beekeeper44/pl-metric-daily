@@ -15,7 +15,7 @@ Vercel app: static page (`public/index.html`) + one serverless function (`api/me
 ## Users & invite links (same layout as TAG-BOT)
 - **Users** tab (admins) or the green **+ Add user** button in the status bar.
 - Top row: **Name · Work email · Role** (`member — full access` / `admin — full access + users`) → **Add person** → **Copy link** or **email it**.
-  They open the link, set a password, and they're in; after that they sign in with email + password. Links work once and last 7 days.
+  They open the link, set a password, and they're in (send the whole copied link — the site's plain address only shows Sign in; if they try to sign in before setting a password they're told to use their invite link); after that they sign in with email + password. Links work once and last 7 days.
 - Table: person · role (change it from the dropdown) · access · status (**active** / **invited** / **off**) · last sign-in · actions:
   - active → **reset password link**, **turn off** (signs them out right away, can't sign in)
   - off → **turn on**, **delete**
