@@ -1863,6 +1863,14 @@ function rowOpts(p) {
       title="${list.length ? `${l}: ${list.length} skills — click to switch ${esc(p.name)} to it` : `${l} isn’t set up for ${esc(p.name)} — click to set it up`}">${n === "1" ? "1st" : n === "2" ? "2nd" : "3rd"}${list.length ? `<b>${list.length}</b>` : ""}</button>`;
   }).join("")}</span>`;
 }
+// bar under the PL tools: everyone switched from a row pill (or a group) since the last push
+function rowBulkHtml() {
+  const keys = bulkState?.done || [], people = keys.map(k => lastPeople[k]).filter(Boolean);
+  const pushable = people.filter(p => p.adminUserId).length, noId = people.length - pushable;
+  const names = people.map(p => `<b>${esc(p.name.split(" ")[0])}</b>${p.presets?.active ? ` <span class="opt-name opt-${p.presets.active}">${p.presets.active === "1" ? "1st" : p.presets.active === "2" ? "2nd" : "3rd"}</span>` : ""}`);
+  return `<span><b>${people.length}</b> switched, not pushed yet: ${names.slice(0, 12).join(" · ")}${names.length > 12 ? ` +${names.length - 12} more` : ""}${noId ? ` · <span class="um-red">${noId} without an admin user ID</span>` : ""}</span>
+    <span class="spacer"></span>${isAdmin() && pushable ? `<button class="pm-push-btn" data-bulk-push="1">⇪ Push ${pushable} to admin</button>` : ""}<button class="row-btn" data-bulk-close="1">Clear list</button>`;
+}
 async function applyRowOption(key, n) {
   const p = lastPeople[key]; if (!p) return;
   const list = p.presets?.opts?.[n] || [], label = OPTS.find(o => o[0] === n)[1];
@@ -1880,8 +1888,11 @@ async function applyRowOption(key, n) {
     await post("/api/team", { action: "presets", key, presets });
     p.skills = skills; p.presets = presets;
     teamEdits[key] = { ...(teamEdits[key] || { key }), skills: JSON.stringify(skills), presets: JSON.stringify(presets) };
+    const done = [...new Set([...(bulkState?.done || []), key])];
+    bulkState = { done };
+    setBulk(rowBulkHtml());
     renderLeaderboard();
-    toast(`${esc(p.name)} → <b>${label}</b> (${list.length} skills on). Open them and press ⇪ Push to write it to admin.`, "ok");
+    if (cardShut.has("pl") || !$("bulk-bar")) toast(`${esc(p.name)} → <b>${label}</b>. ${done.length} waiting to push — open the PL Team card to push them.`, "ok");
   } catch (err) { toast(esc(err.message), "bad"); }
 }
 const ordCell = (p, i, admin) => admin && !p.hidden ? `<span class="ord"><span class="grip" aria-hidden="true" title="Drag to move">⠿</span>
@@ -2071,6 +2082,7 @@ async function pushGroup() {
   await loadTeamEdits(); renderLeaderboard();
   bad ? toast(`Group push finished: <b>${ok}</b> of ${keys.length} people written to admin, <b>${bad}</b> with errors — open them and press ⇪ Push to retry.`, "bad", 0)
       : toast(`Group push finished: all <b>${keys.length}</b> people written to Arena admin (${calls} skill changes).`, "ok");
+  bulkState = null;   // pushed — the next row switches start a new list
   setBulk(`<span><b>${ok}</b> people up to date in admin${bad ? ` · <span class="um-red">${bad} with errors — open them and press ⇪ Push to see which skills</span>` : ""} · ${calls} skill calls.</span>
     <span class="spacer"></span><button class="row-btn" data-bulk-close="1">Done</button>`);
 }
