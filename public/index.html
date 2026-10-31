@@ -1645,6 +1645,10 @@ function teamPeople() {
     dept: e.dept || "", tier: e.tier || "", reports: e.reports_to || "", hidden: !!e.hidden, edited: true, manual: true, seen: null, nums: {} }));
   out.forEach(p => {
     const e = teamEdits[p.key] || {};
+    // one spelling per dept/tier ("other", "Other ", "OTHER" → "Other") so a group never shows twice
+    const tidy = (v, list) => { v = String(v || "").trim().replace(/\s+/g, " "); if (!v) return "";
+      return list.find(x => x.toLowerCase() === v.toLowerCase()) || v.replace(/\b\w/g, c => c.toUpperCase()); };
+    p.dept = tidy(p.dept, [...PL_DEPTS, "Other"]); p.tier = tidy(p.tier, ["Elite", "Pro", "Prime"]);
     p.sort = e.sort ?? null;
     try { p.skills = e.skills ? JSON.parse(e.skills) : (SKILL_SEED[slug(p.name)] || null); } catch { p.skills = null; }
     try { p.presets = e.presets ? JSON.parse(e.presets) : null; } catch { p.presets = null; }
@@ -2017,7 +2021,8 @@ function renderLeaderboard() {
     </article>`;
   }).join("");
   const hiddenList = people.filter(p => p.hidden && match(p));
-  $("lb-hidden").innerHTML = admin && hiddenList.length ? `<details class="lb-hidden-list"${editingTeam ? " open" : ""}><summary>Hidden (${hiddenList.length})</summary>
+  // removed people don't show anywhere; the list to restore them only appears while you're in Edit team
+  $("lb-hidden").innerHTML = admin && editingTeam && hiddenList.length ? `<details class="lb-hidden-list" open><summary>Hidden (${hiddenList.length})</summary>
     <ol class="lb-list">${hiddenList.map((p, i) => personRow(p, i, lbMetric, 1, admin, true)).join("")}</ol></details>` : "";
 }
 async function saveOrder(team, keys) {
