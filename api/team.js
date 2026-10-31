@@ -3,6 +3,8 @@
 // POST /api/team { action: "save", key, name, role, email, team, hidden }   (admins)
 // POST /api/team { action: "add",  name, role, email, team }                (admins) → new hand-added person
 // POST /api/team { action: "delete", key }   (admins; hand-added people only — Metabase people are hidden instead)
+// POST /api/team { action: "remove", keys: [...] }  (admins; hand-added → deleted, Metabase people → hidden)
+// POST /api/team { action: "restore", keys: [...] } (admins; un-hide)
 // POST /api/team { action: "reset",  key }   (admins; drop edits so Metabase values show again — keeps order + skills)
 // POST /api/team { action: "order",  keys: [...] }   (admins; saves the on-screen order of one team, 1..n)
 // POST /api/team { action: "skills", key, skills: { "Crop": true, "Edge": false, … } }   (admins)
@@ -50,6 +52,20 @@ export default async function handler(req, res) {
     if (b.action === "delete") {
       await q("DELETE FROM pmd_team WHERE key = $1 AND manual = true", [b.key]);
       return send(res, 200, { ok: true });
+    }
+    if (b.action === "remove" || b.action === "restore") {
+      const keys = (Array.isArray(b.keys) ? b.keys : []).slice(0, 500).map(k => String(k).slice(0, 200));
+      if (!keys.length) return send(res, 400, { error: "No one selected." });
+      let deleted = 0, hidden = 0;
+      for (const k of keys) {
+        if (b.action === "restore") { await q("UPDATE pmd_team SET hidden = false, updated_by = $2, updated_at = now() WHERE key = $1", [k, me.email]); continue; }
+        const r = await q("DELETE FROM pmd_team WHERE key = $1 AND manual = true RETURNING key", [k]);
+        if (r.length) { deleted++; continue; }
+        await q(`INSERT INTO pmd_team (key, hidden, updated_by) VALUES ($1, true, $2)
+                 ON CONFLICT (key) DO UPDATE SET hidden = true, updated_by = $2, updated_at = now()`, [k, me.email]);
+        hidden++;
+      }
+      return send(res, 200, { ok: true, deleted, hidden });
     }
     if (b.action === "reset") {
       await q(`UPDATE pmd_team SET name = NULL, role = NULL, team = NULL, dept = NULL, tier = NULL, reports_to = NULL, hidden = false,

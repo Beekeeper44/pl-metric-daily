@@ -177,6 +177,14 @@
   .pm-copy { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   /* row option pills (Team tab rows) + paste-as-option pills (person window) */
   .row-opts { display: inline-flex; gap: 5px; margin-left: 8px; }
+  /* remove / restore + duplicates */
+  .row-x { margin-left: 6px; height: 24px; width: 24px; border-radius: 999px; border: 1px solid var(--line); background: none; color: var(--muted, #8b98a5); font: 800 .8rem var(--font-body); cursor: pointer; }
+  .row-x:hover { border-color: #ff5a5a; color: #ff5a5a; }
+  .row-x.restore { width: auto; padding: 0 9px; color: #39ff14; border-color: #39ff14; }
+  .grp-x { margin-left: 8px; height: 30px; padding: 0 12px; border-radius: 999px; border: 1px dashed #ff5a5a; background: none; color: #ff5a5a; font: 700 .8rem var(--font-body); cursor: pointer; }
+  .grp-x:hover { background: color-mix(in srgb, #ff5a5a 14%, transparent); }
+  .dup-tag { margin-left: 6px; padding: 1px 7px; border-radius: 999px; border: 1px solid #ffb020; color: #ffb020; font: 800 .68rem var(--font-body); text-transform: uppercase; letter-spacing: .04em; }
+  .pl-depts .dup-pill { border-color: #ffb020; color: #ffb020; }
   .opt.mini { height: 24px; padding: 0 9px; gap: 5px; border-radius: 999px; font-size: .74rem; }
   .opt.mini b { font-size: .66rem; padding: 0 5px; }
   .opt.mini:hover { box-shadow: 0 0 0 2px #39ff14; }
@@ -1869,12 +1877,51 @@ function plRow(p, admin, i = 0) {
   const open = admin && editingTeam;
   return `<tr class="${p.hidden ? "is-hidden" : ""}${open ? " open" : ""}" data-drag-key="${esc(p.key)}" ${admin && !p.hidden ? 'draggable="true"' : ""}>
     ${admin ? `<td class="ord-cell">${ordCell(p, i, admin)}</td>` : ""}
-    <td class="pl-name"><button class="tm-link" data-person="${esc(p.key)}" title="Open">${esc(p.name)}</button>${canEditTeam() ? `<button class="row-edit" data-person-edit="${esc(p.key)}" title="Edit ${esc(p.name)}" aria-label="Edit ${esc(p.name)}">✎ Edit</button>` : ""}${rowOpts(p)}</td>
+    <td class="pl-name"><button class="tm-link" data-person="${esc(p.key)}" title="Open">${esc(p.name)}</button>${canEditTeam() ? `<button class="row-edit" data-person-edit="${esc(p.key)}" title="Edit ${esc(p.name)}" aria-label="Edit ${esc(p.name)}">✎ Edit</button>` : ""}${rowOpts(p)}${rowX(p)}</td>
     <td>${p.dept ? `<span class="dept d-${slug(p.dept)}">${esc(p.dept)}</span>` : ""}</td>
     <td>${esc(p.role || "")}</td>
     <td>${p.tier ? `<span class="tier t-${slug(p.tier)}">${esc(p.tier)}</span>` : ""}</td>
     <td class="pl-rep">${esc(p.reports || "")}</td>
   </tr>${open ? `<tr class="open"><td colspan="${admin ? 6 : 5}">${editRow(p)}</td></tr>` : ""}`;
+}
+/* ---- Remove people / groups (admins). Hand-added people are deleted; Metabase people are hidden (restore from the Hidden list). ---- */
+let dupKeys = new Set();
+const normName = n => String(n || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+function findDupes(people) {     // same name (ignoring case, accents, dots) or same email = duplicate
+  const by = new Map(), out = new Set();
+  people.filter(p => !p.hidden).forEach(p => {
+    [`n:${normName(p.name)}`, p.email ? `e:${String(p.email).toLowerCase().trim()}` : ""].filter(k => k && k !== "n:").forEach(k => {
+      if (!by.has(k)) by.set(k, []); by.get(k).push(p.key);
+    });
+  });
+  by.forEach(keys => { if (keys.length > 1) keys.forEach(k => out.add(k)); });
+  return out;
+}
+function rowX(p) {
+  if (!canEditTeam() || !isAdmin()) return "";
+  const dup = dupKeys.has(p.key) ? `<span class="dup-tag" title="Same name or email as someone else">duplicate</span>` : "";
+  return p.hidden
+    ? `<button type="button" class="row-x restore" data-row-restore="${esc(p.key)}" title="Show ${esc(p.name)} again">↺ Restore</button>`
+    : `${dup}<button type="button" class="row-x" data-row-remove="${esc(p.key)}" title="Remove ${esc(p.name)}" aria-label="Remove ${esc(p.name)}">✕</button>`;
+}
+async function removePeople(keys, what) {
+  keys = keys.filter(k => lastPeople[k]); if (!keys.length) return;
+  const manual = keys.filter(k => lastPeople[k].manual).length;
+  const msg = keys.length === 1 && !what
+    ? `Remove ${lastPeople[keys[0]].name} from the Team tab?${manual ? " They were added by hand, so they’ll be deleted." : " They’ll move to the Hidden list, where you can restore them."}`
+    : `Remove ${keys.length === 1 ? "the 1 person" : `all ${keys.length} people`} in ${what}?${manual ? ` ${manual} added by hand will be deleted;` : ""} ${keys.length - manual} from Metabase will move to the Hidden list (restorable).`;
+  if (!confirm(msg)) return;
+  if (!me) return toast("Sign in on the live site to save.", "bad");
+  try {
+    const r = await post("/api/team", { action: "remove", keys });
+    await loadTeamEdits(); renderLeaderboard();
+    toast(`Removed ${keys.length === 1 ? esc(lastPeople[keys[0]]?.name || "1 person") : `${keys.length} people`}${r.hidden ? ` · ${r.hidden} hidden` : ""}${r.deleted ? ` · ${r.deleted} deleted` : ""}.`, "ok");
+  } catch (err) { toast(esc(err.message), "bad"); }
+}
+async function restorePeople(keys) {
+  if (!me) return toast("Sign in on the live site to save.", "bad");
+  try { await post("/api/team", { action: "restore", keys }); await loadTeamEdits(); renderLeaderboard(); toast(`Restored ${esc(lastPeople[keys[0]]?.name || "")}.`, "ok"); }
+  catch (err) { toast(esc(err.message), "bad"); }
 }
 /* 1st / 2nd / 3rd Option pills on each row: set up → click switches the person to it; not set up → opens their window to set it up */
 function rowOpts(p) {
@@ -1927,7 +1974,7 @@ function simpleRow(p, admin, i = 0) {
   return `<li class="tm-row${p.hidden ? " is-hidden" : ""}${open ? " open" : ""}${admin ? " can-drag" : ""}" data-drag-key="${esc(p.key)}" ${admin && !p.hidden ? 'draggable="true"' : ""}>
     ${ordCell(p, i, admin)}
     <div class="tm-who">
-      <div class="tm-name"><button class="tm-link" data-person="${esc(p.key)}" title="Open">${esc(p.name)}</button>${canEditTeam() ? `<button class="row-edit" data-person-edit="${esc(p.key)}" title="Edit ${esc(p.name)}" aria-label="Edit ${esc(p.name)}">✎ Edit</button>` : ""}${rowOpts(p)}</div>
+      <div class="tm-name"><button class="tm-link" data-person="${esc(p.key)}" title="Open">${esc(p.name)}</button>${canEditTeam() ? `<button class="row-edit" data-person-edit="${esc(p.key)}" title="Edit ${esc(p.name)}" aria-label="Edit ${esc(p.name)}">✎ Edit</button>` : ""}${rowOpts(p)}${rowX(p)}</div>
       <div class="tm-role">${esc(p.role || "")}</div>
     </div>
     <div class="tm-seen${live ? " live" : ""}">${p.seen ? `${live ? `<span class="live-dot" aria-hidden="true"></span>` : ""}${esc(ago(p.seen))}` : ""}</div>
@@ -2046,7 +2093,7 @@ function plBody(rows, admin, fullIdx) {
         title="Switch everyone in this group to their ${l} (${ready} of ${list.length} have it set up)">${l}<b>${ready}</b></button>`;
     }).join("")}</span>` : "";
     return `<tr class="grp-row"><td colspan="${cols}"><div class="grp-line"><button type="button" class="grp-toggle" data-pl-fold-one="${esc(id)}" aria-expanded="${!shut}">
-        <span class="grp-caret">${shut ? "▸" : "▾"}</span>${label}<span class="grp-count">${list.length}</span></button>${optPills}</div></td></tr>` +
+        <span class="grp-caret">${shut ? "▸" : "▾"}</span>${label}<span class="grp-count">${list.length}</span></button>${optPills}${canEditTeam() && isAdmin() ? `<button type="button" class="grp-x" data-grp-remove="${esc(id)}" title="Remove everyone in this group">✕ Remove group</button>` : ""}</div></td></tr>` +
       (shut ? "" : list.map(p => plRow(p, admin, fullIdx[p.key])).join(""));
   }).join("");
 }
@@ -2113,10 +2160,13 @@ function renderPLCard(list, admin, def) {
   list = list.slice().sort((a, b) => (a.sort ?? 1e6) - (b.sort ?? 1e6) || (rosterIdx[a.key] ?? 9999) - (rosterIdx[b.key] ?? 9999) || a.name.localeCompare(b.name));
   const counts = {}; list.forEach(p => { const d = p.dept || "Other"; counts[d] = (counts[d] || 0) + 1; });
   const depts = PL_DEPTS.filter(d => counts[d]).concat(Object.keys(counts).filter(d => !PL_DEPTS.includes(d)));
-  if (plDept !== "all" && !counts[plDept]) plDept = "all";
+  dupKeys = findDupes(teamPeople().people);
+  const dupList = list.filter(p => dupKeys.has(p.key));
+  if (plDept === "dupes" ? !dupList.length : plDept !== "all" && !counts[plDept]) plDept = "all";
   lastTeamOrder.pl = list.map(p => p.key);
   const fullIdx = Object.fromEntries(list.map((p, i) => [p.key, i]));
-  const rows = list.filter(p => plDept === "all" || (p.dept || "Other") === plDept);
+  const rows = plDept === "dupes" ? dupList.slice().sort((a, b) => normName(a.name).localeCompare(normName(b.name)))
+    : list.filter(p => plDept === "all" || (p.dept || "Other") === plDept);
   const leads = [...new Set(list.map(p => p.reports).filter(Boolean))];
   const add = admin && editingTeam ? `<form class="lb-add pl" data-add-team="pl">
       <input name="name" placeholder="Name" required aria-label="Name"><input name="role" placeholder="Title" aria-label="Title">
@@ -2131,7 +2181,8 @@ function renderPLCard(list, admin, def) {
       `<button data-pl-group="${k}" aria-pressed="${plGroup === k}">${l}</button>`).join("")}</div>
       ${plGroup !== "none" ? `<button class="sk-mini" data-pl-fold="all">collapse all</button><button class="sk-mini" data-pl-fold="none">expand all</button>` : ""}</div>
     <div class="pills pl-depts"><button data-pl-dept="all" aria-pressed="${plDept === "all"}">All ${list.length}</button>${depts.map(d =>
-      `<button data-pl-dept="${esc(d)}" aria-pressed="${plDept === d}"><span class="dept d-${slug(d)}">${esc(d)}</span> ${counts[d]}</button>`).join("")}</div>
+      `<button data-pl-dept="${esc(d)}" aria-pressed="${plDept === d}"><span class="dept d-${slug(d)}">${esc(d)}</span> ${counts[d]}</button>`).join("")}${dupList.length && isAdmin()
+      ? `<button class="dup-pill" data-pl-dept="dupes" aria-pressed="${plDept === "dupes"}" title="Same name or email">⚠ Duplicates ${dupList.length}</button>` : ""}</div>
     <datalist id="pl-leads">${leads.map(n => `<option value="${esc(n)}">`).join("")}</datalist>
     <div class="bulk-bar" id="bulk-bar"${bulkState ? "" : " hidden"}>${bulkState ? bulkState.html : ""}</div>
     <div class="table-wrap"><table class="pl-table">
@@ -2246,6 +2297,12 @@ $("view-team").addEventListener("click", async e => {
   }
   const dp = e.target.closest("[data-pl-dept]");
   if (dp) { plDept = dp.dataset.plDept; return renderLeaderboard(); }
+  const rx = e.target.closest("[data-row-remove]");
+  if (rx) { e.stopPropagation(); return removePeople([rx.dataset.rowRemove]); }
+  const rr = e.target.closest("[data-row-restore]");
+  if (rr) { e.stopPropagation(); return restorePeople([rr.dataset.rowRestore]); }
+  const gx = e.target.closest("[data-grp-remove]");
+  if (gx) { e.stopPropagation(); const id = gx.dataset.grpRemove; return removePeople(groupMembers[id] || [], `“${id.split(":").slice(1).join(":")}”`); }
   const ro = e.target.closest("[data-row-opt]");
   if (ro) { e.stopPropagation(); return applyRowOption(ro.dataset.key, ro.dataset.rowOpt); }
   const pe = e.target.closest("[data-person-edit]");
